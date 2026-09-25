@@ -3,9 +3,11 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Inter",
-    "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, Cambria, "Times New Roman",
+    Times, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   --color-border: var(--border);
   --color-input: var(--input);
@@ -41,77 +43,134 @@
   --color-status-warning: var(--status-warning);
   --color-status-serious: var(--status-serious);
   --color-status-critical: var(--status-critical);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-strong: var(--status-neutral-strong);
+  --color-track: var(--track);
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
 
-  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.05);
-  --shadow-elevated: 0 4px 12px -2px rgb(0 0 0 / 0.06),
-    0 2px 6px -2px rgb(0 0 0 / 0.04);
-  --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.12),
-    0 4px 12px -4px rgb(0 0 0 / 0.08);
+  --shadow-soft: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+  --shadow-elevated: 0 2px 4px -1px rgb(15 23 42 / 0.04),
+    0 4px 12px -2px rgb(15 23 42 / 0.06);
+  --shadow-overlay: 0 12px 32px -8px rgb(15 23 42 / 0.08),
+    0 4px 12px -4px rgb(15 23 42 / 0.04);
 }
 
-/* Light theme — warm neutral, indigo primary */
+/* Editorial luxury — paper-like, warm neutral, restrained indigo */
 :root {
-  --background: oklch(0.99 0.005 95);
-  --foreground: oklch(0.18 0.01 270);
+  /* Surfaces — warm, off-white paper */
+  --background: oklch(0.985 0.005 80);
+  --foreground: oklch(0.18 0.015 260);
   --surface: oklch(1 0 0);
-  --surface-foreground: oklch(0.22 0.012 270);
+  --surface-foreground: oklch(0.22 0.015 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.01 270);
+  --card-foreground: oklch(0.18 0.015 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.01 270);
-  --primary: oklch(0.55 0.18 268);
-  --primary-foreground: oklch(0.98 0.005 95);
-  --secondary: oklch(0.96 0.008 95);
-  --secondary-foreground: oklch(0.25 0.012 270);
-  --muted: oklch(0.96 0.008 95);
-  --muted-foreground: oklch(0.5 0.012 270);
-  --accent: oklch(0.95 0.015 95);
-  --accent-foreground: oklch(0.22 0.012 270);
-  --destructive: oklch(0.58 0.22 27);
-  --destructive-foreground: oklch(0.98 0.005 95);
-  --border: oklch(0.91 0.008 95);
-  --input: oklch(0.91 0.008 95);
-  --ring: oklch(0.55 0.18 268);
-  --radius: 0.625rem;
+  --popover-foreground: oklch(0.18 0.015 260);
 
-  --status-good: oklch(0.62 0.16 152);
-  --status-warning: oklch(0.78 0.15 80);
-  --status-serious: oklch(0.68 0.18 35);
-  --status-critical: oklch(0.58 0.22 27);
+  /* Primary — deep, restrained indigo */
+  --primary: oklch(0.42 0.13 270);
+  --primary-foreground: oklch(0.985 0.005 80);
+
+  /* Neutrals — warm, not gray */
+  --secondary: oklch(0.965 0.008 80);
+  --secondary-foreground: oklch(0.25 0.012 260);
+  --muted: oklch(0.96 0.008 80);
+  --muted-foreground: oklch(0.5 0.012 260);
+  --accent: oklch(0.95 0.012 80);
+  --accent-foreground: oklch(0.22 0.015 260);
+
+  /* Destructive — warm red */
+  --destructive: oklch(0.55 0.2 27);
+  --destructive-foreground: oklch(0.985 0.005 80);
+
+  /* Lines — barely-there borders */
+  --border: oklch(0.92 0.006 80);
+  --input: oklch(0.92 0.006 80);
+  --ring: oklch(0.42 0.13 270);
+  --radius: 0.5rem;
+
+  /* Status — semantically distinct */
+  --status-good: oklch(0.55 0.13 152);
+  --status-warning: oklch(0.7 0.14 75);
+  --status-serious: oklch(0.62 0.16 35);
+  --status-critical: oklch(0.55 0.2 27);
+  --status-neutral: oklch(0.78 0.006 270);
+  --status-neutral-strong: oklch(0.62 0.012 270);
+
+  /* Today — calendar "today" surface + ring, distinct from --primary */
+  --today: oklch(0.93 0.04 270);
+  --today-ring: oklch(0.62 0.08 270);
+
+  /* Calendar out-of-month — recessed behind in-month cells */
+  --calendar-out-of-month: oklch(0.94 0.006 80);
+  --calendar-out-of-month-fg: oklch(0.55 0.008 80);
+
+  /* Chart scaffolding — visible gridline on card surface in both themes */
+  --chart-grid: oklch(0.92 0.006 80);
+
+  /* Track — unfilled switch / progress rail, lighter than border so it
+     stays visible on a card surface in both light + dark modes. */
+  --track: oklch(0.9 0.006 80);
 }
 
-/* Dark theme — deep neutral, refined indigo */
+/* Dark luxury — ink + warm shadow, same restrained indigo */
 .dark {
-  --background: oklch(0.16 0.008 270);
-  --foreground: oklch(0.96 0.005 95);
-  --surface: oklch(0.2 0.008 270);
-  --surface-foreground: oklch(0.94 0.005 95);
-  --card: oklch(0.2 0.008 270);
-  --card-foreground: oklch(0.96 0.005 95);
-  --popover: oklch(0.22 0.008 270);
-  --popover-foreground: oklch(0.96 0.005 95);
-  --primary: oklch(0.7 0.18 268);
-  --primary-foreground: oklch(0.16 0.008 270);
-  --secondary: oklch(0.27 0.008 270);
-  --secondary-foreground: oklch(0.94 0.005 95);
-  --muted: oklch(0.25 0.008 270);
-  --muted-foreground: oklch(0.65 0.012 270);
-  --accent: oklch(0.27 0.012 270);
-  --accent-foreground: oklch(0.96 0.005 95);
-  --destructive: oklch(0.65 0.22 27);
-  --destructive-foreground: oklch(0.96 0.005 95);
-  --border: oklch(0.28 0.008 270);
-  --input: oklch(0.28 0.008 270);
-  --ring: oklch(0.7 0.18 268);
+  --background: oklch(0.16 0.012 270);
+  --foreground: oklch(0.96 0.005 80);
+  --surface: oklch(0.19 0.012 270);
+  --surface-foreground: oklch(0.94 0.005 80);
+  --card: oklch(0.2 0.012 270);
+  --card-foreground: oklch(0.96 0.005 80);
+  --popover: oklch(0.22 0.012 270);
+  --popover-foreground: oklch(0.96 0.005 80);
 
-  --status-good: oklch(0.72 0.16 152);
-  --status-warning: oklch(0.82 0.15 80);
-  --status-serious: oklch(0.74 0.18 35);
-  --status-critical: oklch(0.7 0.22 27);
+  --primary: oklch(0.72 0.13 270);
+  --primary-foreground: oklch(0.16 0.012 270);
+
+  --secondary: oklch(0.26 0.012 270);
+  --secondary-foreground: oklch(0.94 0.005 80);
+  --muted: oklch(0.24 0.012 270);
+  --muted-foreground: oklch(0.65 0.012 270);
+  --accent: oklch(0.26 0.014 270);
+  --accent-foreground: oklch(0.96 0.005 80);
+
+  --destructive: oklch(0.65 0.2 27);
+  --destructive-foreground: oklch(0.96 0.005 80);
+
+  --border: oklch(0.28 0.012 270);
+  --input: oklch(0.28 0.012 270);
+  --ring: oklch(0.72 0.13 270);
+
+  --status-good: oklch(0.7 0.14 152);
+  --status-warning: oklch(0.78 0.14 75);
+  --status-serious: oklch(0.72 0.16 35);
+  --status-critical: oklch(0.68 0.2 27);
+  --status-neutral: oklch(0.38 0.012 270);
+  --status-neutral-strong: oklch(0.5 0.014 270);
+
+  /* Today — calendar "today" surface + ring, distinct from --primary */
+  --today: oklch(0.34 0.06 270);
+  --today-ring: oklch(0.78 0.08 270);
+
+  /* Calendar out-of-month — recessed behind in-month cells */
+  --calendar-out-of-month: oklch(0.16 0.012 270);
+  --calendar-out-of-month-fg: oklch(0.5 0.012 270);
+
+  /* Chart scaffolding — visible gridline on card surface in both themes */
+  --chart-grid: oklch(0.34 0.012 270);
+
+  /* Track — unfilled switch / progress rail. In dark mode it has to be
+     lighter than the card surface (~oklch 0.2) so the OFF state reads. */
+  --track: oklch(0.32 0.012 270);
+
+  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --shadow-elevated: 0 2px 4px -1px rgb(0 0 0 / 0.3),
+    0 4px 12px -2px rgb(0 0 0 / 0.4);
+  --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.5),
+    0 4px 12px -4px rgb(0 0 0 / 0.3);
 }
 
 * {
@@ -123,7 +182,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-feature-settings: "rlig" 1, "calt" 1, "cv02", "cv03", "cv04", "cv11";
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01", "cv02", "cv03", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -134,8 +193,19 @@ body {
   letter-spacing: -0.005em;
 }
 
+.font-display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "calt" 0;
+}
+
 ::selection {
-  background: color-mix(in oklch, var(--primary) 24%, transparent);
+  background: color-mix(in oklch, var(--primary) 18%, transparent);
   color: var(--foreground);
 }
 
@@ -168,10 +238,11 @@ a:focus:not(:focus-visible) {
   background: var(--muted-foreground);
 }
 
-@keyframes fade-in {
+/* Motion — stagger-friendly */
+@keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -179,20 +250,69 @@ a:focus:not(:focus-visible) {
   }
 }
 
+.animate-fade-up {
+  animation: fade-up 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-delay-0 {
+  animation-delay: 0ms;
+}
+.animate-delay-1 {
+  animation-delay: 60ms;
+}
+.animate-delay-2 {
+  animation-delay: 120ms;
+}
+.animate-delay-3 {
+  animation-delay: 180ms;
+}
+.animate-delay-4 {
+  animation-delay: 240ms;
+}
+.animate-delay-5 {
+  animation-delay: 300ms;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes pulse-subtle {
-  0%,
-  100% {
-    opacity: 1;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
-  50% {
-    opacity: 0.6;
+  .animate-fade-up {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
-.animate-pulse-subtle {
-  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Skeleton — paper-like, subtle */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.skeleton {
+  background: var(--secondary);
+  animation: skeleton-pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  border-radius: calc(var(--radius) - 4px);
 }

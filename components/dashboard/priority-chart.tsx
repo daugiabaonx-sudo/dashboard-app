@@ -14,11 +14,14 @@ import { tasks } from "@/lib/data";
 import { priorityLabel } from "@/lib/semantic";
 import type { TaskPriority } from "@/lib/types";
 
+// Priority uses the serious/critical escalation — disjoint from the
+// status chart's review/done semantic accents so an "In review" task
+// at "Urgent" priority never reads as two of the same hue.
 const COLUMNS: { priority: TaskPriority; color: string }[] = [
-  { priority: "urgent", color: "oklch(0.62 0.22 27)" },
-  { priority: "high", color: "oklch(0.72 0.17 35)" },
-  { priority: "medium", color: "oklch(0.62 0.16 268)" },
-  { priority: "low", color: "oklch(0.65 0.012 270)" },
+  { priority: "urgent", color: "var(--status-critical)" },
+  { priority: "high", color: "var(--status-serious)" },
+  { priority: "medium", color: "var(--primary)" },
+  { priority: "low", color: "var(--status-neutral-strong)" },
 ];
 
 export function PriorityChart() {

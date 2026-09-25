@@ -14,12 +14,15 @@ import { tasks } from "@/lib/data";
 import { statusLabel } from "@/lib/semantic";
 import type { TaskStatus } from "@/lib/types";
 
+// Brand ramp for the workflow stages (backlog → in_progress), then
+// semantic accents for review and done. Status uses design tokens so it
+// respects the theme automatically instead of hard-coded oklch.
 const COLUMNS: { status: TaskStatus; color: string }[] = [
-  { status: "backlog", color: "oklch(0.7 0.01 270)" },
-  { status: "todo", color: "oklch(0.65 0.05 268)" },
-  { status: "in_progress", color: "oklch(0.62 0.18 268)" },
-  { status: "in_review", color: "oklch(0.78 0.15 80)" },
-  { status: "done", color: "oklch(0.62 0.16 152)" },
+  { status: "backlog", color: "var(--status-neutral)" },
+  { status: "todo", color: "var(--status-neutral-strong)" },
+  { status: "in_progress", color: "var(--primary)" },
+  { status: "in_review", color: "var(--status-warning)" },
+  { status: "done", color: "var(--status-good)" },
 ];
 
 export function StatusChart() {
