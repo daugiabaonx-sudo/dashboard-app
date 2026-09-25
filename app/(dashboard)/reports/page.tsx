@@ -20,6 +20,8 @@ import { Badge, Dot } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { projects, tasks, getKpis } from "@/lib/data";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
+import { Share2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const VELOCITY = [
   { week: "W-7", completed: 8, created: 14 },
@@ -116,9 +118,20 @@ export default function ReportsPage() {
                 Tasks completed vs created each week — gap should stay positive.
               </p>
             </div>
-            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              8 weeks
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                8 weeks
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigator.clipboard.writeText(window.location.href).catch(() => {})}
+                aria-label="Copy report URL"
+              >
+                <Share2 className="size-3.5" />
+                Export
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -127,23 +140,25 @@ export default function ReportsPage() {
               <AreaChart data={VELOCITY} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="completedFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.55 0.13 152)" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="oklch(0.55 0.13 152)" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="var(--chart-completed)" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="var(--chart-completed)" stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="createdFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.42 0.13 270)" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="oklch(0.42 0.13 270)" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="var(--chart-created)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="var(--chart-created)" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" vertical={false} />
                 <XAxis
                   dataKey="week"
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)", style: { fontVariantNumeric: "tabular-nums" } }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  domain={[0, 30]}
+                  tickCount={6}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)", style: { fontVariantNumeric: "tabular-nums" } }}
                   axisLine={false}
                   tickLine={false}
                   allowDecimals={false}
@@ -166,7 +181,7 @@ export default function ReportsPage() {
                   type="monotone"
                   dataKey="created"
                   name="Created"
-                  stroke="oklch(0.42 0.13 270)"
+                  stroke="var(--chart-created)"
                   fill="url(#createdFill)"
                   strokeWidth={2}
                 />
@@ -174,7 +189,7 @@ export default function ReportsPage() {
                   type="monotone"
                   dataKey="completed"
                   name="Completed"
-                  stroke="oklch(0.55 0.13 152)"
+                  stroke="var(--chart-completed)"
                   fill="url(#completedFill)"
                   strokeWidth={2}
                 />

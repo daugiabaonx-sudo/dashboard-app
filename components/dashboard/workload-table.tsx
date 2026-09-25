@@ -37,10 +37,12 @@ export function WorkloadTable() {
                 />
               </div>
               <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
-                <span>{r.assignedTasks} assigned</span>
+                <span>
+                  <span className="font-mono tabular-nums">{r.assignedTasks}</span> assigned
+                </span>
                 {r.overdueTasks > 0 && (
                   <span className="text-status-critical">
-                    {r.overdueTasks} overdue
+                    <span className="font-mono tabular-nums">{r.overdueTasks}</span> overdue
                   </span>
                 )}
               </div>

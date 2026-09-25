@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { Mail, Plus, UserPlus } from "lucide-react";
+import { ChevronRight, Mail, Plus, UserPlus } from "lucide-react";
+import type { ComponentProps } from "react";
+import type { UserRole } from "@/lib/types";
+import type { BadgeProps } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -12,6 +15,14 @@ import { users, getTeamWorkload, tasks } from "@/lib/data";
 import { formatPercent } from "@/lib/format";
 import { utilizationTone } from "@/lib/semantic";
 import { cn } from "@/lib/cn";
+
+const ROLE_TONE: Record<UserRole, NonNullable<BadgeProps["tone"]>> = {
+  owner: "primary",
+  admin: "serious",
+  manager: "primary",
+  member: "outline",
+  viewer: "outline",
+};
 
 export default function TeamPage() {
   const workload = getTeamWorkload();
@@ -50,7 +61,7 @@ export default function TeamPage() {
             <Link
               key={u.id}
               href={`/team/${u.id}`}
-              className="group block animate-fade-up opacity-0"
+              className="group block animate-fade-up opacity-0 motion-reduce:animate-none motion-reduce:opacity-100"
               style={{ animationDelay: `${i * 50}ms` }}
             >
               <Card className="h-full transition-all duration-200 group-hover:border-foreground/15 group-hover:shadow-lifted">
@@ -65,9 +76,12 @@ export default function TeamPage() {
                       </p>
                       <p className="mt-0.5 text-[12px] text-muted-foreground">{u.department}</p>
                     </div>
-                    <Badge tone="outline" size="sm" className="capitalize">
-                      {u.role}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge tone={ROLE_TONE[u.role]} size="sm" className={cn("capitalize", u.role !== "member" && u.role !== "viewer" && "border-transparent font-medium")}>
+                        {u.role}
+                      </Badge>
+                      <ChevronRight aria-hidden className="size-4 text-muted-foreground opacity-0 -translate-x-1 transition-all duration-200 motion-reduce:transition-none group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0" />
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                     <Mail className="size-3" />

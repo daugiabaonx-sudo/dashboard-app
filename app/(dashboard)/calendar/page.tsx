@@ -5,9 +5,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge, Dot } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { tasks, findUser, findProject } from "@/lib/data";
 import { priorityLabel, priorityTone, statusLabel, statusTone } from "@/lib/semantic";
+import Link from "next/link";
 import { cn } from "@/lib/cn";
 
 const TODAY = new Date();
@@ -78,9 +80,23 @@ export default function CalendarPage() {
             <CardTitle className="font-display text-xl font-normal tracking-tight">
               {MONTH_NAME} {YEAR}
             </CardTitle>
-            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              Today: {TODAY.toLocaleString("en-US", { month: "short", day: "numeric" })}
-            </span>
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
+            >
+              <a
+                href="#cal-today"
+                aria-label={`Jump to today, ${TODAY.toLocaleString("en-US", { month: "short", day: "numeric" })}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("cal-today")?.scrollIntoView({ block: "center", behavior: "smooth" });
+                }}
+              >
+                Today: {TODAY.toLocaleString("en-US", { month: "short", day: "numeric" })}
+              </a>
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -106,8 +122,9 @@ export default function CalendarPage() {
               return (
                 <div
                   key={idx}
+                  id={isToday ? "cal-today" : undefined}
                   className={cn(
-                    "bg-card p-1.5 h-32 overflow-hidden flex flex-col gap-1 transition-colors",
+                    "bg-card p-1.5 h-32 overflow-hidden flex flex-col gap-1 transition-colors scroll-mt-20",
                     isToday && "ring-2 ring-primary ring-inset",
                   )}
                 >
@@ -130,24 +147,28 @@ export default function CalendarPage() {
                     {dayTasks.slice(0, 3).map((t) => {
                       const overdueItem = t.status !== "done" && new Date(t.dueDate) < new Date();
                       return (
-                        <div
+                        <Link
                           key={t.id}
+                          href={`/tasks?task=${t.id}`}
+                          aria-label={`Open task ${t.title}`}
                           className={cn(
-                            "truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight cursor-pointer transition-colors",
+                            "block truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                             t.status === "done" && "bg-status-good/10 text-status-good line-through",
                             t.status !== "done" && !overdueItem && "bg-secondary text-foreground hover:bg-primary/10",
                             overdueItem && "bg-status-critical/10 text-status-critical",
                           )}
-                          title={t.title}
                         >
                           {t.title}
-                        </div>
+                        </Link>
                       );
                     })}
                     {dayTasks.length > 3 && (
-                      <div className="text-[10px] text-muted-foreground">
+                      <Link
+                        href={`/tasks?due=${key}`}
+                        className="font-mono text-[10px] tabular-nums text-muted-foreground hover:text-foreground truncate whitespace-nowrap"
+                      >
                         +{dayTasks.length - 3} more
-                      </div>
+                      </Link>
                     )}
                   </div>
                   {hasOverdue && (
@@ -186,7 +207,7 @@ export default function CalendarPage() {
                   className="flex items-center gap-4 py-3 first:pt-0 last:pb-0"
                 >
                   <div className="w-14 shrink-0 flex flex-col items-center justify-center rounded-md bg-secondary/60 py-1.5">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <span className="font-mono text-[10px] font-medium uppercase tracking-wider tabular-nums whitespace-nowrap text-muted-foreground">
                       {new Date(t.dueDate).toLocaleString("en-US", { month: "short" })}
                     </span>
                     <span className="font-display text-[20px] font-normal leading-none tabular-nums text-foreground">

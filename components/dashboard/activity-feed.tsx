@@ -61,7 +61,8 @@ export function ActivityFeed() {
                 className="mt-0.5 inline-flex items-center gap-1 text-xs text-primary hover:underline"
               >
                 {a.targetTitle}
-                <span className="text-muted-foreground">· {formatRelative(a.createdAt)}</span>
+                <span className="text-muted-foreground">· </span>
+                <span className="font-mono tabular-nums text-muted-foreground">{formatRelative(a.createdAt)}</span>
               </Link>
             </div>
           </li>
