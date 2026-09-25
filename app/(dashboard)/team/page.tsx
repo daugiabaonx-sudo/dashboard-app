@@ -1,110 +1,136 @@
 import Link from "next/link";
-import { Mail } from "lucide-react";
+import { Mail, Plus, UserPlus } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { Badge, Dot } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import { users, getTeamWorkload, tasks } from "@/lib/data";
 import { formatPercent } from "@/lib/format";
+import { utilizationTone } from "@/lib/semantic";
+import { cn } from "@/lib/cn";
 
 export default function TeamPage() {
   const workload = getTeamWorkload();
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {users.length} members across {new Set(users.map((u) => u.department)).size} departments
-        </p>
-      </header>
+  const totalOpen = tasks.filter((t) => t.status !== "done").length;
+  const overloaded = workload.filter((w) => w.utilization > 90).length;
+  const departments = new Set(users.map((u) => u.department)).size;
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {users.map((u) => {
+  return (
+    <div className="space-y-10 animate-fade-in">
+      <PageHeader
+        eyebrow={`${users.length} members · ${departments} departments`}
+        title={<>The people doing the <span className="italic text-primary">work</span>.</>}
+        description={`${totalOpen} open tasks, ${overloaded} at over capacity. Watch the bars on the right — anyone in critical needs relief.`}
+        actions={
+          <>
+            <Button variant="outline" size="sm">
+              Export roster
+            </Button>
+            <Button size="sm">
+              <UserPlus className="size-3.5" />
+              Invite member
+            </Button>
+          </>
+        }
+      />
+
+      <section className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 auto-rows-fr">
+        {users.map((u, i) => {
           const w = workload.find((x) => x.userId === u.id);
           const utilization = w?.utilization ?? 0;
-          const tone =
-            utilization > 90
-              ? "bg-status-critical"
-              : utilization > 75
-              ? "bg-status-warning"
-              : "bg-primary";
+          const tone = utilizationTone(utilization);
+          const assigned = w?.assignedTasks ?? 0;
+          const done = w?.completedTasks ?? 0;
+          const overdue = w?.overdueTasks ?? 0;
           return (
-            <Link key={u.id} href={`/team/${u.id}`} className="group">
-              <Card className="h-full transition-shadow hover:shadow-elevated">
-                <CardHeader>
+            <Link
+              key={u.id}
+              href={`/team/${u.id}`}
+              className="group block animate-fade-up opacity-0"
+              style={{ animationDelay: `${i * 50}ms` }}
+            >
+              <Card className="h-full transition-all duration-200 group-hover:border-foreground/15 group-hover:shadow-lifted">
+                <CardContent className="p-5 space-y-4">
                   <div className="flex items-start gap-3">
                     <Avatar color={u.avatarColor} className="size-12">
                       <span className="text-sm">{u.initials}</span>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <CardTitle className="text-base group-hover:text-primary transition-colors">
+                      <p className="text-[15px] font-medium leading-snug tracking-tight text-foreground group-hover:text-primary transition-colors">
                         {u.name}
-                      </CardTitle>
-                      <CardDescription className="text-xs">
-                        {u.department}
-                      </CardDescription>
+                      </p>
+                      <p className="mt-0.5 text-[12px] text-muted-foreground">{u.department}</p>
                     </div>
                     <Badge tone="outline" size="sm" className="capitalize">
                       {u.role}
                     </Badge>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                     <Mail className="size-3" />
                     <span className="truncate">{u.email}</span>
                   </div>
-
                   <div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Capacity</span>
-                      <span className="font-semibold tabular-nums">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                        <Dot tone={tone} />
+                        Capacity
+                      </span>
+                      <span
+                        className={cn(
+                          "font-mono tabular-nums",
+                          tone === "critical" && "text-status-critical",
+                          tone === "warning" && "text-status-warning",
+                          tone === "good" && "text-foreground",
+                        )}
+                      >
                         {formatPercent(utilization)}
                       </span>
                     </div>
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary">
+                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-secondary">
                       <div
-                        className={`h-full ${tone}`}
-                        style={{ width: `${utilization}%` }}
+                        className={cn(
+                          "h-full transition-all",
+                          tone === "critical" && "bg-status-critical",
+                          tone === "warning" && "bg-status-warning",
+                          tone === "good" && "bg-primary",
+                        )}
+                        style={{ width: `${Math.min(100, utilization)}%` }}
                       />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-3 gap-2 border-t border-border pt-3 text-center">
                     <div>
-                      <div className="text-base font-semibold tabular-nums">
-                        {w?.assignedTasks ?? 0}
-                      </div>
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <p className="font-display text-xl font-normal leading-none tabular-nums text-foreground">
+                        {assigned}
+                      </p>
+                      <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
                         Assigned
-                      </div>
+                      </p>
                     </div>
                     <div>
-                      <div className="text-base font-semibold tabular-nums text-status-good">
-                        {w?.completedTasks ?? 0}
-                      </div>
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <p className="font-display text-xl font-normal leading-none tabular-nums text-status-good">
+                        {done}
+                      </p>
+                      <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
                         Done
-                      </div>
+                      </p>
                     </div>
                     <div>
-                      <div
-                        className={`text-base font-semibold tabular-nums ${
-                          (w?.overdueTasks ?? 0) > 0
-                            ? "text-status-critical"
-                            : "text-muted-foreground"
-                        }`}
+                      <p
+                        className={cn(
+                          "font-display text-xl font-normal leading-none tabular-nums",
+                          overdue > 0 ? "text-status-critical" : "text-muted-foreground",
+                        )}
                       >
-                        {w?.overdueTasks ?? 0}
-                      </div>
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {overdue}
+                      </p>
+                      <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
                         Overdue
-                      </div>
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -112,7 +138,7 @@ export default function TeamPage() {
             </Link>
           );
         })}
-      </div>
+      </section>
     </div>
   );
 }

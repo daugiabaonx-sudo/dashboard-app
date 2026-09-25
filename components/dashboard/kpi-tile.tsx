@@ -1,100 +1,89 @@
-import {
-  AlertTriangle,
-  ArrowDownRight,
-  ArrowRight,
-  ArrowUpRight,
-  CheckCircle2,
-  Clock,
-  Folder,
-  ListTodo,
-  TrendingUp,
-} from "lucide-react";
-import type { ComponentType } from "react";
+import Link from "next/link";
+import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import type { ReactNode } from "react";
 import type { DashboardKpi } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
-const iconById: Record<string, ComponentType<{ className?: string }>> = {
-  "active-projects": Folder,
-  "tasks-completed": CheckCircle2,
-  "in-progress": ListTodo,
-  overdue: AlertTriangle,
-  "upcoming-deadlines": Clock,
-};
+interface KpiTileProps {
+  kpi: DashboardKpi;
+  href?: string;
+  icon?: ReactNode;
+  delay?: number;
+}
 
-const intentStyle: Record<
-  DashboardKpi["intent"],
-  { ring: string; text: string; bg: string }
-> = {
-  neutral: { ring: "", text: "text-foreground", bg: "" },
+const intentMap = {
+  neutral: {
+    dot: "bg-muted-foreground",
+    text: "text-muted-foreground",
+    chipBg: "bg-secondary",
+  },
   good: {
-    ring: "ring-status-good/30",
+    dot: "bg-status-good",
     text: "text-status-good",
-    bg: "bg-status-good/8",
+    chipBg: "bg-status-good/10",
   },
   warning: {
-    ring: "ring-status-warning/30",
+    dot: "bg-status-warning",
     text: "text-status-warning",
-    bg: "bg-status-warning/8",
+    chipBg: "bg-status-warning/10",
   },
   critical: {
-    ring: "ring-status-critical/30",
+    dot: "bg-status-critical",
     text: "text-status-critical",
-    bg: "bg-status-critical/8",
+    chipBg: "bg-status-critical/10",
   },
-};
+} as const;
 
-export function KpiTile({ kpi }: { kpi: DashboardKpi }) {
-  const Icon = iconById[kpi.id] ?? TrendingUp;
-  const tone = intentStyle[kpi.intent];
-  const Trend =
-    kpi.trend === "up"
-      ? ArrowUpRight
-      : kpi.trend === "down"
-      ? ArrowDownRight
-      : ArrowRight;
-  return (
+export function KpiTile({ kpi, href, icon, delay = 0 }: KpiTileProps) {
+  const intent = intentMap[kpi.intent];
+  const TrendIcon =
+    kpi.trend === "up" ? ArrowUpRight : kpi.trend === "down" ? ArrowDownRight : Minus;
+
+  const content = (
     <div
       className={cn(
-        "group rounded-lg border border-border bg-card p-5 shadow-soft transition-shadow hover:shadow-elevated",
-        kpi.intent === "critical" && "ring-1 ring-status-critical/30",
+        "group relative flex h-full flex-col justify-between rounded-lg border border-border bg-card p-5 shadow-soft transition-all duration-200",
+        "hover:border-foreground/15 hover:shadow-lifted",
+        "motion-safe:animate-fade-up motion-safe:opacity-0",
       )}
+      style={{ animationDelay: `${delay * 80}ms` }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div
+      <div className="flex items-start justify-between">
+        {icon && (
+          <div className="flex size-9 items-center justify-center rounded-md bg-secondary text-muted-foreground transition-colors group-hover:text-foreground">
+            {icon}
+          </div>
+        )}
+        <span
           className={cn(
-            "flex size-9 items-center justify-center rounded-md",
-            tone.bg || "bg-secondary",
-            tone.text || "text-muted-foreground",
+            "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium tabular-nums",
+            intent.text,
+            intent.chipBg,
           )}
         >
-          <Icon className="size-4" />
-        </div>
-        {kpi.intent === "critical" && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-status-critical/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-status-critical">
-            Action needed
-          </span>
-        )}
+          <span className={cn("size-1.5 rounded-full", intent.dot)} aria-hidden />
+          <TrendIcon className="size-3" aria-hidden />
+          {Math.abs(kpi.delta)}%
+        </span>
       </div>
-      <div className="mt-4">
-        <p className="text-sm font-medium text-muted-foreground">{kpi.label}</p>
-        <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">
+      <div className="mt-6 space-y-1">
+        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          {kpi.label}
+        </p>
+        <p className="font-display text-[40px] font-normal leading-none tracking-[-0.02em] text-foreground tabular-nums">
           {kpi.value}
         </p>
-      </div>
-      <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-        <Trend
-          className={cn(
-            "size-3.5",
-            kpi.trend === "up" && kpi.intent !== "critical"
-              ? "text-status-good"
-              : kpi.trend === "up" && kpi.intent === "critical"
-              ? "text-status-critical"
-              : "text-muted-foreground",
-          )}
-        />
-        <span>{kpi.delta > 0 ? `+${kpi.delta}` : kpi.delta}</span>
-        <span className="text-muted-foreground/70">· {kpi.deltaLabel}</span>
+        <p className="pt-1 text-[12px] text-muted-foreground">{kpi.deltaLabel}</p>
       </div>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg">
+        {content}
+      </Link>
+    );
+  }
+  return content;
 }

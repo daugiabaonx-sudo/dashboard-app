@@ -26,15 +26,25 @@ export function TaskRow({ task, compact }: Props) {
       ? "warning"
       : "neutral";
 
+  const isDone = task.status === "done";
   return (
     <div
+      data-done={isDone}
       className={cn(
         "group flex items-center gap-3 rounded-md border border-transparent px-3 py-2.5 transition-colors hover:bg-secondary/50 hover:border-border",
+        isDone && "bg-secondary/40 opacity-70",
         compact && "py-2",
       )}
     >
       <button
-        className="size-4 rounded-[5px] border-2 border-border hover:border-primary transition-colors shrink-0"
+        type="button"
+        aria-pressed={isDone}
+        className={cn(
+          "size-4 rounded-[5px] border-2 transition-colors shrink-0",
+          isDone
+            ? "border-status-good bg-status-good/15"
+            : "border-border hover:border-primary",
+        )}
         aria-label={`Toggle ${task.title}`}
       />
       <div className="flex-1 min-w-0">

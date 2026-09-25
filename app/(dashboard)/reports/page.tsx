@@ -13,11 +13,11 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, Dot } from "@/components/ui/badge";
+import { PageHeader } from "@/components/layout/page-header";
 import { projects, tasks, getKpis } from "@/lib/data";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 
@@ -39,71 +39,87 @@ export default function ReportsPage() {
   );
   const totalSpent = projects.reduce((acc, p) => acc + p.spent, 0);
   const totalBudget = projects.reduce((acc, p) => acc + p.budget, 0);
+  const openCount = tasks.filter((t) => t.status !== "done").length;
+  const blocked = tasks.filter((t) => t.blocked).length;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Last 8 weeks · Updated {new Date().toLocaleString("en-US", { dateStyle: "medium" })}
-        </p>
-      </header>
+    <div className="space-y-10 animate-fade-in">
+      <PageHeader
+        eyebrow={`Last 8 weeks · Updated ${new Date().toLocaleString("en-US", { dateStyle: "medium" })}`}
+        title={<>Numbers, <span className="italic text-primary">honestly</span>.</>}
+        description="What we shipped, what it cost, and where we're slipping. Pull a thread on any chart to inspect the underlying data."
+        actions={null}
+      />
 
-      <section className="grid gap-3 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Completion rate</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
+      {/* Stat strip — editorial numbers */}
+      <section className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="animate-fade-up opacity-0" style={{ animationDelay: "60ms" }}>
+          <CardContent className="p-5 space-y-2">
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Completion rate
+            </p>
+            <p className="font-display text-[40px] font-normal leading-none tracking-[-0.02em] tabular-nums text-foreground">
               {formatPercent(completionRate)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-status-good">
-              ↑ 6% vs previous 8 weeks
+            </p>
+            <p className="text-[11px] text-status-good inline-flex items-center gap-1">
+              <span aria-hidden>↑</span> 6% vs previous 8 weeks
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Tasks completed</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
+        <Card className="animate-fade-up opacity-0" style={{ animationDelay: "120ms" }}>
+          <CardContent className="p-5 space-y-2">
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Tasks completed
+            </p>
+            <p className="font-display text-[40px] font-normal leading-none tracking-[-0.02em] tabular-nums text-foreground">
               {formatNumber(kpis[1]?.value ?? 0)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">this week</p>
+            </p>
+            <p className="text-[11px] text-muted-foreground">this week</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Budget used</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
+        <Card className="animate-fade-up opacity-0" style={{ animationDelay: "180ms" }}>
+          <CardContent className="p-5 space-y-2">
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Budget used
+            </p>
+            <p className="font-display text-[40px] font-normal leading-none tracking-[-0.02em] tabular-nums text-foreground">
               {formatPercent((totalSpent / totalBudget) * 100)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
+            </p>
+            <p className="text-[11px] text-muted-foreground">
               {formatCurrency(totalSpent)} of {formatCurrency(totalBudget)}
             </p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Open work</CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {tasks.filter((t) => t.status !== "done").length}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">tasks in flight</p>
+        <Card className="animate-fade-up opacity-0" style={{ animationDelay: "240ms" }}>
+          <CardContent className="p-5 space-y-2">
+            <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Open work
+            </p>
+            <p className="font-display text-[40px] font-normal leading-none tracking-[-0.02em] tabular-nums text-foreground">
+              {openCount}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              tasks in flight{blocked > 0 ? ` · ${blocked} blocked` : ""}
+            </p>
           </CardContent>
         </Card>
       </section>
 
-      <Card>
+      <Card className="animate-fade-up opacity-0" style={{ animationDelay: "300ms" }}>
         <CardHeader>
-          <CardTitle>Velocity</CardTitle>
-          <CardDescription>Tasks completed vs created each week</CardDescription>
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <CardTitle className="font-display text-xl font-normal tracking-tight">
+                Velocity
+              </CardTitle>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                Tasks completed vs created each week — gap should stay positive.
+              </p>
+            </div>
+            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              8 weeks
+            </span>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="h-72 w-full">
@@ -111,12 +127,12 @@ export default function ReportsPage() {
               <AreaChart data={VELOCITY} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="completedFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.62 0.16 152)" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="oklch(0.62 0.16 152)" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="oklch(0.55 0.13 152)" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="oklch(0.55 0.13 152)" stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="createdFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.62 0.18 268)" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="oklch(0.62 0.18 268)" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="oklch(0.42 0.13 270)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="oklch(0.42 0.13 270)" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="2 4" vertical={false} />
@@ -150,7 +166,7 @@ export default function ReportsPage() {
                   type="monotone"
                   dataKey="created"
                   name="Created"
-                  stroke="oklch(0.62 0.18 268)"
+                  stroke="oklch(0.42 0.13 270)"
                   fill="url(#createdFill)"
                   strokeWidth={2}
                 />
@@ -158,7 +174,7 @@ export default function ReportsPage() {
                   type="monotone"
                   dataKey="completed"
                   name="Completed"
-                  stroke="oklch(0.62 0.16 152)"
+                  stroke="oklch(0.55 0.13 152)"
                   fill="url(#completedFill)"
                   strokeWidth={2}
                 />
@@ -168,41 +184,52 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <Card>
+      <section className="grid gap-3 lg:grid-cols-2">
+        <Card className="animate-fade-up opacity-0" style={{ animationDelay: "360ms" }}>
           <CardHeader>
-            <CardTitle>Project health</CardTitle>
-            <CardDescription>Health based on progress vs time elapsed</CardDescription>
+            <CardTitle className="font-display text-xl font-normal tracking-tight">
+              Project health
+            </CardTitle>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Health based on progress vs time elapsed.
+            </p>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="divide-y divide-border">
             {projects.map((p) => {
-              const expected =
-                Math.min(
-                  100,
-                  Math.max(
-                    0,
-                    ((Date.now() - new Date(p.startDate).getTime()) /
-                      (new Date(p.dueDate).getTime() - new Date(p.startDate).getTime())) *
-                      100,
-                  ),
-                );
+              const expected = Math.min(
+                100,
+                Math.max(
+                  0,
+                  ((Date.now() - new Date(p.startDate).getTime()) /
+                    (new Date(p.dueDate).getTime() - new Date(p.startDate).getTime())) *
+                    100,
+                ),
+              );
               const variance = p.progress - expected;
-              const healthy = variance > -10;
+              const tone =
+                variance > 10 ? "good" : variance > -10 ? "warning" : "critical";
               return (
-                <div key={p.id} className="flex items-center gap-3">
+                <div key={p.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-medium">
-                        {p.name}
-                      </span>
-                      <Badge tone={healthy ? "good" : "warning"} size="sm">
-                        {healthy ? "On track" : "Behind"}
+                      <span className="truncate text-sm font-medium">{p.name}</span>
+                      <Badge
+                        tone={tone === "good" ? "good" : tone === "warning" ? "warning" : "critical"}
+                        size="sm"
+                      >
+                        {tone === "good" ? "On track" : tone === "warning" ? "Behind" : "Critical"}
                       </Badge>
                     </div>
-                    <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span>{formatPercent(p.progress)} actual</span>
-                      <span>·</span>
-                      <span>{formatPercent(expected)} expected</span>
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="flex-1 h-1 overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full bg-primary"
+                          style={{ width: `${p.progress}%` }}
+                        />
+                      </div>
+                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground shrink-0">
+                        {formatPercent(p.progress)} / {formatPercent(expected)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -211,29 +238,42 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="animate-fade-up opacity-0" style={{ animationDelay: "420ms" }}>
           <CardHeader>
-            <CardTitle>Top blockers</CardTitle>
-            <CardDescription>Tasks stuck the longest this month</CardDescription>
+            <CardTitle className="font-display text-xl font-normal tracking-tight">
+              Top blockers
+            </CardTitle>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Tasks stuck the longest this month.
+            </p>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             {tasks
               .filter((t) => t.blocked)
               .slice(0, 5)
               .map((t) => (
-                <div key={t.id} className="rounded-md border border-border p-3">
-                  <p className="text-sm font-medium">{t.title}</p>
+                <div
+                  key={t.id}
+                  className="rounded-md border border-status-critical/20 bg-status-critical/[0.04] p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium leading-snug">{t.title}</p>
+                    <Badge tone="critical" size="sm">
+                      Blocked
+                    </Badge>
+                  </div>
                   {t.blockerNote && (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1.5 text-[12px] text-muted-foreground">
                       {t.blockerNote}
                     </p>
                   )}
                 </div>
               ))}
             {tasks.filter((t) => t.blocked).length === 0 && (
-              <p className="text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 rounded-md border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                <Dot tone="good" />
                 No active blockers this week.
-              </p>
+              </div>
             )}
           </CardContent>
         </Card>

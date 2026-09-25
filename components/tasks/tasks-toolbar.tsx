@@ -3,7 +3,6 @@
 import { LayoutGrid, ListFilter, List as ListIcon, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { tasks } from "@/lib/data";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 
@@ -11,23 +10,11 @@ type View = "list" | "board";
 
 export function TasksToolbar({ view }: { view: View }) {
   const [current, setCurrent] = useState<View>(view);
-  const stats = {
-    open: tasks.filter((t) => t.status !== "done").length,
-    overdue: tasks.filter(
-      (t) => t.status !== "done" && new Date(t.dueDate) < new Date(),
-    ).length,
-    blocked: tasks.filter((t) => t.blocked).length,
-  };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {stats.open} open · {stats.overdue} overdue · {stats.blocked} blocked
-          </p>
-        </div>
+        <p className="sr-only">Tasks toolbar</p>
         <div className="flex items-center gap-2">
           <div className="flex items-center rounded-md border border-border p-0.5">
             <Link
