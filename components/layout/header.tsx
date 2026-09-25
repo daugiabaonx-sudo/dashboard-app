@@ -26,7 +26,7 @@ export function Header() {
   const unread = notifications.filter((n) => !n.read).length;
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur lg:px-8">
+    <header className="sticky top-14 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur lg:top-0 lg:px-8">
       <div className="lg:hidden w-14" />
 
       <div className="relative flex-1 max-w-xl">
