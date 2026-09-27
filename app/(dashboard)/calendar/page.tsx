@@ -5,8 +5,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge, Dot } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
+import { JumpToTodayButton } from "@/components/calendar/jump-to-today-button";
 import { tasks, findUser, findProject } from "@/lib/data";
 import { priorityLabel, priorityTone, statusLabel, statusTone } from "@/lib/semantic";
 import Link from "next/link";
@@ -80,23 +80,10 @@ export default function CalendarPage() {
             <CardTitle className="font-display text-xl font-normal tracking-tight">
               {MONTH_NAME} {YEAR}
             </CardTitle>
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
-            >
-              <a
-                href="#cal-today"
-                aria-label={`Jump to today, ${TODAY.toLocaleString("en-US", { month: "short", day: "numeric" })}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("cal-today")?.scrollIntoView({ block: "center", behavior: "smooth" });
-                }}
-              >
-                Today: {TODAY.toLocaleString("en-US", { month: "short", day: "numeric" })}
-              </a>
-            </Button>
+            <JumpToTodayButton
+              targetId="cal-today"
+              todayLabel={TODAY.toLocaleString("en-US", { month: "short", day: "numeric" })}
+            />
           </div>
         </CardHeader>
         <CardContent>

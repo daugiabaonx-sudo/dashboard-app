@@ -7,7 +7,10 @@ import { daysUntil, formatDate } from "@/lib/format";
 import { priorityLabel, priorityTone, statusLabel, statusTone } from "@/lib/semantic";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/cn";
-import { CalendarDays, MessageSquare, Paperclip, AlertCircle } from "lucide-react";
+import { CalendarDays, MessageSquare, Paperclip, AlertCircle, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { useDeleteTask, useTasks } from "@/hooks/use-tasks";
+import { useSession } from "@/hooks/use-session";
 
 interface Props {
   task: Task;
@@ -27,6 +30,26 @@ export function TaskRow({ task, compact }: Props) {
       : "neutral";
 
   const isDone = task.status === "done";
+
+  const { data: session } = useSession();
+  const workspaceId = session?.userId ?? "anon";
+  // Prime the cache so optimistic updates land in the same query the page
+  // re-uses after router.refresh().
+  useTasks(workspaceId);
+  const remove = useDeleteTask(workspaceId);
+
+  function onDelete() {
+    const ok = window.confirm(`Delete "${task.title}"? This can't be undone.`);
+    if (!ok) return;
+    remove.mutate(
+      { id: task.id },
+      {
+        onError: () => toast.error("Failed to delete task"),
+        onSuccess: () => toast.success("Task deleted"),
+      },
+    );
+  }
+
   return (
     <div
       data-done={isDone}
@@ -104,6 +127,14 @@ export function TaskRow({ task, compact }: Props) {
       <Avatar color={assignee?.avatarColor} className="size-7 shrink-0">
         <span>{assignee?.initials}</span>
       </Avatar>
+      <button
+        type="button"
+        aria-label={`Delete ${task.title}`}
+        onClick={onDelete}
+        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-status-critical transition-opacity"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
     </div>
   );
 }

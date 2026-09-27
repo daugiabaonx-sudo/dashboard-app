@@ -1,14 +1,20 @@
 "use client";
 
-import { LayoutGrid, ListFilter, List as ListIcon, Plus, Search } from "lucide-react";
+import { LayoutGrid, ListFilter, List as ListIcon, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
+import { NewTaskTrigger } from "./new-task-trigger";
 
 type View = "list" | "board";
 
-export function TasksToolbar({ view }: { view: View }) {
+interface TasksToolbarProps {
+  view: View;
+  projects: { id: string; name: string }[];
+}
+
+export function TasksToolbar({ view, projects }: TasksToolbarProps) {
   const [current, setCurrent] = useState<View>(view);
 
   return (
@@ -44,10 +50,7 @@ export function TasksToolbar({ view }: { view: View }) {
               Board
             </Link>
           </div>
-          <Button>
-            <Plus />
-            New task
-          </Button>
+          <NewTaskTrigger projects={projects} />
         </div>
       </div>
 

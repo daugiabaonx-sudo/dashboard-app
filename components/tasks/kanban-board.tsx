@@ -1,15 +1,17 @@
+// components/tasks/kanban-board.tsx
+// Kanban view for tasks. Reads from lib/data via the parent (server) and
+// renders one KanbanCard per task. The card is a client component that
+// wires status change + delete to /api/tasks.
+
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { tasks } from "@/lib/data";
-import { priorityLabel, priorityTone, statusLabel } from "@/lib/semantic";
-import { TaskRow } from "./task-row";
-import type { TaskStatus } from "@/lib/types";
-import { cn } from "@/lib/cn";
+import { statusLabel } from "@/lib/semantic";
+import type { Task, TaskStatus } from "@/lib/types";
+import { KanbanCard } from "./kanban-card";
 
 const COLUMNS: TaskStatus[] = [
   "backlog",
@@ -19,7 +21,11 @@ const COLUMNS: TaskStatus[] = [
   "done",
 ];
 
-export function KanbanBoard() {
+interface KanbanBoardProps {
+  tasks: Task[];
+}
+
+export function KanbanBoard({ tasks }: KanbanBoardProps) {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5 items-start">
       {COLUMNS.map((status) => {
@@ -43,43 +49,7 @@ export function KanbanBoard() {
                   Nothing here
                 </div>
               ) : (
-                items.map((t) => {
-                  const done = t.status === "done";
-                  return (
-                  <div
-                    key={t.id}
-                    className={cn(
-                      "rounded-md border bg-card p-3 shadow-soft hover:shadow-elevated transition-shadow",
-                      done
-                        ? "border-border/60 bg-secondary/40 opacity-70"
-                        : "border-border",
-                    )}
-                  >
-                    <p
-                      className={cn(
-                        "text-sm font-medium leading-snug",
-                        done && "line-through decoration-muted-foreground/60",
-                      )}
-                    >
-                      {t.title}
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <Badge tone={priorityTone[t.priority]} size="sm">
-                        {priorityLabel[t.priority]}
-                      </Badge>
-                      {t.blocked && (
-                        <Badge tone="critical" size="sm">
-                          Blocked
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span>{t.estimatedHours}h</span>
-                      <span className="tabular-nums">{t.progress}%</span>
-                    </div>
-                  </div>
-                  );
-                })
+                items.map((t) => <KanbanCard key={t.id} task={t} />)
               )}
             </CardContent>
           </Card>

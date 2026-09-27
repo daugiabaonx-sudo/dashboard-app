@@ -9,6 +9,7 @@ import { Badge, Dot } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { Avatar } from "@/components/ui/avatar";
+import { NewProjectTrigger } from "@/components/projects/new-project-trigger";
 import { projects, findUser } from "@/lib/data";
 import {
   formatDate,
@@ -56,10 +57,7 @@ export default function ProjectsPage() {
               <Filter className="size-3.5" />
               Filter
             </Button>
-            <Button size="sm">
-              <Plus className="size-3.5" />
-              New project
-            </Button>
+            <NewProjectTrigger />
           </>
         }
       />

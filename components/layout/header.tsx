@@ -2,7 +2,6 @@
 
 import {
   Bell,
-  Check,
   Moon,
   Plus,
   Search,
@@ -14,6 +13,9 @@ import { notifications, users } from "@/lib/data";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { NewTaskTrigger } from "@/components/tasks/new-task-trigger";
+import { SignOutMenu } from "@/components/layout/sign-out-menu";
+import { useProjects } from "@/hooks/use-projects";
 
 const me = users[0];
 if (!me) {
@@ -24,6 +26,11 @@ export function Header() {
   const { resolvedTheme, setTheme } = useTheme();
   const [notifOpen, setNotifOpen] = useState(false);
   const unread = notifications.filter((n) => !n.read).length;
+  const { data: projects } = useProjects();
+  const projectOptions = (projects ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+  }));
 
   return (
     <header className="sticky top-14 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur lg:top-0 lg:px-8">
@@ -47,10 +54,16 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-1">
-        <Button size="sm" className="hidden sm:inline-flex">
-          <Plus />
-          <span>New task</span>
-        </Button>
+        <span className="hidden sm:inline-flex">
+          <NewTaskTrigger
+            size="sm"
+            projects={projectOptions}
+            label="New task"
+          >
+            <Plus />
+            <span>New task</span>
+          </NewTaskTrigger>
+        </span>
 
         <Button
           variant="ghost"
@@ -122,6 +135,7 @@ export function Header() {
               {me.role}
             </span>
           </div>
+          <SignOutMenu />
         </div>
       </div>
     </header>

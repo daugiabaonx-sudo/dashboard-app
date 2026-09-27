@@ -3,7 +3,7 @@ import { KanbanBoard } from "@/components/tasks/kanban-board";
 import { TaskRow } from "@/components/tasks/task-row";
 import { TasksToolbar } from "@/components/tasks/tasks-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
-import { tasks } from "@/lib/data";
+import { tasks, projects } from "@/lib/data";
 
 interface TasksPageProps {
   searchParams: Promise<{ view?: string }>;
@@ -18,6 +18,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   ).length;
   const blocked = tasks.filter((t) => t.blocked).length;
 
+  const projectOptions = projects.map((p) => ({ id: p.id, name: p.name }));
+
   return (
     <div className="space-y-10 animate-fade-in">
       <PageHeader
@@ -27,19 +29,20 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         actions={null}
       />
 
-      <TasksToolbar view={view} />
+      <TasksToolbar view={view} projects={projectOptions} />
 
       {view === "board" ? (
-        <KanbanBoard />
+        <KanbanBoard tasks={tasks} />
       ) : (
         <Card className="animate-fade-up opacity-0" style={{ animationDelay: "80ms" }}>
           <CardContent className="p-0">
-            <div className="grid grid-cols-[auto_1fr_auto_auto_auto] items-center gap-3 border-b border-border px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-3 border-b border-border px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
               <span className="w-4" />
               <span>Task</span>
               <span className="hidden md:block">Status / Priority</span>
               <span className="hidden sm:block">Due</span>
               <span>Assignee</span>
+              <span className="w-4" />
             </div>
             <div className="divide-y divide-border">
               {tasks.map((t) => (
