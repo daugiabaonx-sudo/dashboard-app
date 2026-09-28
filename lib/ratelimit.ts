@@ -8,6 +8,8 @@
  *
  * Cleanup: expired buckets are garbage-collected lazily on each miss.
  */
+import { warn } from "@/lib/logger";
+
 type Bucket = { count: number; resetAt: number };
 const BUCKETS = new Map<string, Bucket>();
 
@@ -47,6 +49,11 @@ export function consume(bucketKey: RateLimitKey, clientIp: string): ConsumeResul
 
   if (existing.count >= limit.count) {
     const retryAfterSeconds = Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
+    warn("rate-limit exceeded", {
+      bucket: bucketKey,
+      clientIp,
+      retryAfterSeconds,
+    });
     return { ok: false, retryAfterSeconds };
   }
 

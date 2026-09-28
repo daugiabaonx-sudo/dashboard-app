@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.gitignore
+.env.local
+.env.*.local
+.claude
+test-results
+playwright-report
+tests
+docs
+*.log
+.DS_Store
