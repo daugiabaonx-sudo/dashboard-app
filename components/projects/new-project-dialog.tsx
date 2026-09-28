@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { createProjectSchema, type CreateProjectInput } from "@/lib/schemas/project";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { csrfFetch } from "@/lib/csrf-client";
 import {
   Dialog,
   DialogContent,
@@ -62,10 +63,9 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
   async function onSubmit(values: CreateProjectInput) {
     setSubmitting(true);
     try {
-      const res = await fetch("/api/projects", {
+      const res = await csrfFetch("/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: values,
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as {

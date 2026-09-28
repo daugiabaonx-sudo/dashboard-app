@@ -1,0 +1,108 @@
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  _gc,
+  classifyBucket,
+  consume,
+  resolveClientIp,
+} from "@/lib/ratelimit";
+
+describe("ratelimit helpers", () => {
+  describe("classifyBucket", () => {
+    it("groups all /api/auth/* under the auth bucket", () => {
+      expect(classifyBucket("/api/auth/sign-in")).toBe("auth");
+      expect(classifyBucket("/api/auth/sign-up")).toBe("auth");
+      expect(classifyBucket("/api/auth/refresh")).toBe("auth");
+    });
+
+    it("groups everything else under the write bucket", () => {
+      expect(classifyBucket("/api/projects")).toBe("write");
+      expect(classifyBucket("/api/tasks/123")).toBe("write");
+      expect(classifyBucket("/api/notifications")).toBe("write");
+    });
+  });
+
+  describe("consume", () => {
+    beforeEach(() => {
+      _gc(Date.now() + 10_000_000);
+    });
+
+    it("first request from an IP is allowed with remaining capacity", () => {
+      const result = consume("write", "1.2.3.4");
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.remaining).toBeGreaterThanOrEqual(0);
+    });
+
+    it("blocks after the per-window cap is reached", () => {
+      const limit = 5;
+      for (let i = 0; i < limit; i++) {
+        const r = consume("auth", "9.9.9.9");
+        expect(r.ok).toBe(true);
+      }
+      const blocked = consume("auth", "9.9.9.9");
+      expect(blocked.ok).toBe(false);
+      if (!blocked.ok) expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
+    });
+
+    it("isolates buckets per IP", () => {
+      for (let i = 0; i < 10; i++) {
+        consume("auth", "10.0.0.1");
+      }
+      const freshIp = consume("auth", "10.0.0.2");
+      expect(freshIp.ok).toBe(true);
+    });
+
+    it("isolates by bucket key", () => {
+      for (let i = 0; i < 10; i++) {
+        consume("auth", "10.0.0.3");
+      }
+      const freshBucket = consume("write", "10.0.0.3");
+      expect(freshBucket.ok).toBe(true);
+    });
+  });
+
+  describe("resolveClientIp", () => {
+    it("prefers x-forwarded-for first hop", () => {
+      const headers = new Headers({
+        "x-forwarded-for": "203.0.113.5, 10.0.0.1, 10.0.0.2",
+        "x-real-ip": "10.0.0.99",
+      });
+      expect(resolveClientIp(headers, "fallback")).toBe("203.0.113.5");
+    });
+
+    it("falls back to x-real-ip when no xff", () => {
+      const headers = new Headers({ "x-real-ip": "203.0.113.6" });
+      expect(resolveClientIp(headers, "fallback")).toBe("203.0.113.6");
+    });
+
+    it("falls back to the provided default", () => {
+      const headers = new Headers();
+      expect(resolveClientIp(headers, "fallback")).toBe("fallback");
+    });
+
+    it("handles malformed xff safely", () => {
+      const headers = new Headers({ "x-forwarded-for": "" });
+      expect(resolveClientIp(headers, "fallback")).toBe("fallback");
+    });
+  });
+
+  describe("_gc", () => {
+    it("removes expired buckets and reports freed count", () => {
+      // build up an expired bucket via consume + manual time-skew check
+      consume("write", "203.0.113.7");
+      const future = Date.now() + 120_000;
+      const freed = _gc(future);
+      expect(freed).toBeGreaterThanOrEqual(1);
+    });
+
+    it("keeps fresh buckets untouched", () => {
+      consume("write", "203.0.113.8");
+      const freed = _gc(Date.now() + 100); // barely after ingestion
+      expect(freed).toBe(0);
+    });
+  });
+
+  afterEach(() => {
+    // sweep any lingering state between tests
+    _gc(Date.now() + 10_000_000);
+  });
+});

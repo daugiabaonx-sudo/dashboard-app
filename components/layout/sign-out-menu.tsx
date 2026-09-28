@@ -12,6 +12,7 @@ import { LogOut } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { csrfFetch } from "@/lib/csrf-client";
 
 export function SignOutMenu() {
   const [signingOut, setSigningOut] = useState(false);
@@ -20,7 +21,7 @@ export function SignOutMenu() {
     if (signingOut) return;
     setSigningOut(true);
     try {
-      const res = await fetch("/api/auth/sign-out", { method: "POST" });
+      const res = await csrfFetch("/api/auth/sign-out", { method: "POST" });
       if (!res.ok) {
         toast.error("Sign out failed");
         setSigningOut(false);

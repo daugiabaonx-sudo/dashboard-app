@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { createTaskSchema, type CreateTaskInput } from "@/lib/schemas/task";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { csrfFetch } from "@/lib/csrf-client";
 import {
   Dialog,
   DialogContent,
@@ -73,10 +74,9 @@ export function NewTaskDialog({
   async function onSubmit(values: CreateTaskInput) {
     setSubmitting(true);
     try {
-      const res = await fetch("/api/tasks", {
+      const res = await csrfFetch("/api/tasks", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: values,
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as {
