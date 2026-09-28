@@ -34,10 +34,10 @@ export function NewProjectDialog({ open, onOpenChange }: NewProjectDialogProps) 
   const [submitting, setSubmitting] = useState(false);
   const [, startTransition] = useTransition();
 
-  const today = new Date().toISOString().slice(0, 10);
-  const inOneMonth = new Date(Date.now() + 30 * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
+  const today = useState(() => new Date().toISOString().slice(0, 10))[0];
+  const inOneMonth = useState(
+    () => new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
+  )[0];
 
   const {
     register,

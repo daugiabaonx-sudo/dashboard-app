@@ -27,8 +27,9 @@ export default async function TeamMemberPage({ params }: PageProps) {
   }
   const mine = tasks.filter((t) => t.assigneeId === user.id);
   const done = mine.filter((t) => t.status === "done").length;
+  const now = new Date();
   const overdue = mine.filter(
-    (t) => t.status !== "done" && new Date(t.dueDate) < new Date(),
+    (t) => t.status !== "done" && new Date(t.dueDate) < now,
   ).length;
   const inFlight = mine.filter((t) => t.status !== "done").length;
   const utilization = user.capacityHours > 0
@@ -153,7 +154,7 @@ export default async function TeamMemberPage({ params }: PageProps) {
           ) : (
             mine.map((t) => {
               const days = Math.round(
-                (new Date(t.dueDate).getTime() - Date.now()) / 86400000,
+                (new Date(t.dueDate).getTime() - now.getTime()) / 86400000,
               );
               const isOverdue = days < 0 && t.status !== "done";
               const isDone = t.status === "done";

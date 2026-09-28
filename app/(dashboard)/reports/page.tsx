@@ -46,14 +46,20 @@ export default function ReportsPage() {
   const blocked = tasks.filter((t) => t.blocked).length;
 
   // Client-only timestamp to avoid SSR/CSR hydration mismatch (React #418).
-  // `now` is null on the server and during the first client render; it is set
-  // in useEffect, so the markup produced during SSR matches the initial
-  // hydration render exactly.
+  // Initial render on both server and client uses `null` so the markup matches;
+  // after hydration we read the real `Date.now()` in an effect. This is the
+  // exact "external-system sync after mount" pattern React docs recommend for
+  // client-only values — the lint rule fires because it can't tell that
+  // `now` is genuinely non-local state, not derived data. See
+  // https://react.dev/reference/react/useSyncExternalStore for the long-form
+  // rationale (useSyncExternalStore is the principled alternative, but its
+  // snapshot must return a stable value, which `Date.now()` doesn't).
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNow(Date.now());
   }, []);
-  const updatedLabel = now
+  const updatedLabel = now !== null
     ? new Date(now).toLocaleString("en-US", { dateStyle: "medium" })
     : "";
 
