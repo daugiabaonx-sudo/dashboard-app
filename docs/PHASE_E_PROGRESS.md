@@ -96,7 +96,22 @@ lib/auth/*         |     100 |     100 |     100 |     100 |
 app/api/**         |     100 |   ~83   |     100 |     100 |
 ```
 
-Enforced by `vitest.config.ts` thresholds AND `.github/workflows/ci.yml`'s `npm run test:unit:coverage` step — both fail-closed when coverage drops below 80% on any of {lines, functions, branches, statements}.
+Enforced by `vitest.config.ts` thresholds AND `.github/workflows/ci.yml`'s `coverage` job — both fail-closed when coverage drops below 80% on any of {lines, functions, branches, statements}.
+
+### CI pipeline (`.github/workflows/ci.yml`)
+
+Jobs run in order, each gated on the previous one:
+
+```
+typecheck  ──needs──▶  unit  ──needs──▶  coverage  ──needs──▶  build  ──needs──▶  e2e
+   (5m)               (10m)              (10m)               (10m)             (20m)
+```
+
+- `typecheck` — `npx tsc --noEmit`.
+- `unit` — `npm run test:unit` (no coverage, fast inner loop).
+- `coverage` — `npm run test:unit:coverage`. **Pipeline gate.** Fails closed at the ≥80% thresholds declared in `vitest.config.ts`. Blocks `build` and `e2e` from running.
+- `build` — `npm run build` against the mock-Supabase env.
+- `e2e` — Playwright against a real Postgres service + mock-Supabase app. Only launches after coverage passes, so a coverage regression short-circuits the ~20-minute browser suite before it consumes runner minutes.
 
 ## How to switch off mock mode
 
