@@ -216,6 +216,47 @@ describe("projects", () => {
       expect(revalidatePath).toHaveBeenCalledWith("/projects");
     });
 
+    it("only forwards supplied fields — partial PATCH does not overwrite columns with create-schema defaults", async () => {
+      chain.__setResult({ data: [baseProjectRow], error: null });
+      await updateProject("p1", { name: "Renamed" });
+
+      const passed = vi.mocked(chain.update).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(passed).toEqual({ name: "Renamed" });
+      // Every other writable column must be absent — sending defaults back
+      // through Supabase would clobber real existing row values.
+      expect("description" in passed).toBe(false);
+      expect("status" in passed).toBe(false);
+      expect("priority" in passed).toBe(false);
+      expect("owner_id" in passed).toBe(false);
+      expect("member_ids" in passed).toBe(false);
+      expect("start_date" in passed).toBe(false);
+      expect("due_date" in passed).toBe(false);
+      expect("budget" in passed).toBe(false);
+      expect("tags" in passed).toBe(false);
+      expect(chain.eq).toHaveBeenCalledWith("id", "p1");
+    });
+
+    it("forwards a multi-field sparse PATCH with snake_case mapping", async () => {
+      chain.__setResult({ data: [baseProjectRow], error: null });
+      await updateProject("p1", {
+        priority: "critical",
+        dueDate: "2026-06-30",
+      });
+
+      const passed = vi.mocked(chain.update).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(passed).toEqual({
+        priority: "critical",
+        due_date: "2026-06-30",
+      });
+      expect(chain.eq).toHaveBeenCalledWith("id", "p1");
+    });
+
     it("throws updateProject-prefixed error when the update errors", async () => {
       chain.__setResult({ data: null, error: { message: "rls" } });
       await expect(updateProject("p1", validInput)).rejects.toThrow(

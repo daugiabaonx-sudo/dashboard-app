@@ -103,22 +103,36 @@ export async function updateProject(
   id: string,
   input: UpdateProjectInput,
 ): Promise<Project> {
+  // Capture the keys the caller actually supplied. `updateProjectSchema =
+  // createProjectSchema.partial()` (Zod 4) preserves the create-schema's
+  // `.default(...)` values, so `parse({ name: "Renamed" })` returns
+  // `{ name: "Renamed", description: "", status: "planning", priority:
+  // "medium", memberIds: [], budget: 0, tags: [], ownerId: undefined,
+  // startDate: undefined, dueDate: undefined }` — there's no way to tell
+  // from `parsed` alone which keys were explicit vs filled by Zod defaults.
+  // Restrict the forwarded set to caller-supplied keys to avoid clobbering
+  // real existing row columns on partial PATCH.
+  const suppliedKeys = Object.keys(input);
   const parsed = updateProjectSchema.parse(input);
   const supabase = await createSupabaseServerClient();
+  const updateRow: Record<string, unknown> = {};
+  if (suppliedKeys.includes("name")) updateRow.name = parsed.name;
+  if (suppliedKeys.includes("description"))
+    updateRow.description = parsed.description;
+  if (suppliedKeys.includes("status")) updateRow.status = parsed.status;
+  if (suppliedKeys.includes("priority")) updateRow.priority = parsed.priority;
+  if (suppliedKeys.includes("ownerId")) updateRow.owner_id = parsed.ownerId;
+  if (suppliedKeys.includes("memberIds"))
+    updateRow.member_ids = parsed.memberIds;
+  if (suppliedKeys.includes("startDate"))
+    updateRow.start_date = parsed.startDate;
+  if (suppliedKeys.includes("dueDate")) updateRow.due_date = parsed.dueDate;
+  if (suppliedKeys.includes("budget")) updateRow.budget = parsed.budget;
+  if (suppliedKeys.includes("tags")) updateRow.tags = parsed.tags;
+
   const { data, error } = await supabase
     .from("projects")
-    .update({
-      name: parsed.name,
-      description: parsed.description,
-      status: parsed.status,
-      priority: parsed.priority,
-      owner_id: parsed.ownerId,
-      member_ids: parsed.memberIds,
-      start_date: parsed.startDate,
-      due_date: parsed.dueDate,
-      budget: parsed.budget,
-      tags: parsed.tags,
-    })
+    .update(updateRow)
     .eq("id", id)
     .select("*");
   if (error) throw new Error(`updateProject: ${error.message}`);
