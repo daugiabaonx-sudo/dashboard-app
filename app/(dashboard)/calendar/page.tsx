@@ -33,7 +33,6 @@ function getMonthGrid(year: number, month: number): (Date | null)[] {
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const VIEW_TABS = ["Month", "Week", "Day"] as const;
-type ViewTab = (typeof VIEW_TABS)[number];
 
 export default function CalendarPage() {
   const cells = getMonthGrid(YEAR, MONTH);

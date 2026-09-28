@@ -28,6 +28,9 @@ export function SignOutMenu() {
         return;
       }
       toast.success("Signed out");
+      // Hard navigation: see file header — soft router.push races with the
+      // mock-mode proxy that re-mints the session cookie on the next RSC.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/login");
     } catch {
       toast.error("Network error");

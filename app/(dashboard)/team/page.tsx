@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Mail, Plus, UserPlus } from "lucide-react";
-import type { ComponentProps } from "react";
+import { ChevronRight, Mail, UserPlus } from "lucide-react";
 import type { UserRole } from "@/lib/types";
 import type { BadgeProps } from "@/components/ui/badge";
 import {

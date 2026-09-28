@@ -55,11 +55,6 @@ interface QueryResult<T> {
   error: { message: string } | null;
 }
 
-interface SingleResult<T> {
-  data: T | null;
-  error: { message: string } | null;
-}
-
 class MockQuery<T extends Record<string, unknown>> {
   private filters: Filter[] = [];
   private limitN: number | null = null;
@@ -114,24 +109,6 @@ class MockQuery<T extends Record<string, unknown>> {
     const result: QueryResult<T> = { data: limited, error: null };
     return Promise.resolve(onFulfilled ? onFulfilled(result) : (result as unknown as TResult1))
       .catch(onRejected ?? undefined) as PromiseLike<TResult1 | TResult2>;
-  }
-}
-
-class MockSingleQuery<T extends Record<string, unknown>> {
-  constructor(private row: T | null) {}
-  select(_columns?: string): this {
-    return this;
-  }
-  eq(_column: string, _value: unknown): this {
-    return this;
-  }
-  then<TResult1 = SingleResult<T>, TResult2 = never>(
-    onFulfilled?:
-      | ((value: SingleResult<T>) => TResult1 | PromiseLike<TResult1>)
-      | null,
-  ): PromiseLike<TResult1 | TResult2> {
-    const result: SingleResult<T> = { data: this.row, error: null };
-    return Promise.resolve(onFulfilled ? onFulfilled(result) : (result as unknown as TResult1));
   }
 }
 

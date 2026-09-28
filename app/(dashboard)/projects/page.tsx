@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { Plus, Filter } from "lucide-react";
+import { Filter } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
 } from "@/components/ui/card";
 import { Badge, Dot } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
