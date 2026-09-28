@@ -1,62 +1,105 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SUNEXT Dashboard
 
-## Getting Started
+Operations dashboard for project + task tracking. A Next.js 16 app router
+project with Supabase (Postgres + PostgREST) on the back end and an
+in-memory mock for offline development.
 
-First, run the development server:
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local         # leave MOCK_SUPABASE=1 to run offline
+npm run dev                        # http://127.0.0.1:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+That's enough to click through the dashboard. Sign-in is auto-handled by
+the mock-mode middleware (`proxy.ts`) — no real credentials required.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Real Supabase mode
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The default mocks Supabase in memory. To run against a real local
+Postgres + PostgREST stack:
 
-## Learn More
+```bash
+npm run db:reset                   # compose up + apply 0001-0012 migrations + seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+Then point the app at it:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# in .env.local
+MOCK_SUPABASE=0
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Auth, Realtime, Storage, and Meta are intentionally NOT bundled in
+`docker-compose.yml` because their per-image env vars drift between
+tags (`DATABASE_URL`, `API_EXTERNAL_URL`, `SECRET_KEY_BASE`, etc.).
+For those, point the URL at Supabase Cloud or run the corresponding
+images yourself.
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Script | What it does |
+|--------|--------------|
+| `npm run dev` | `next dev` — Turbopack, mock mode |
+| `npm run build` | Production build (`output: "standalone"`) |
+| `npm run start` | Production server (offline mock mode) |
+| `npm run test:unit` | Vitest unit tests |
+| `npm run test:e2e` | Playwright across chromium + Pixel 7 |
+| `npm run lint` | ESLint (some pre-existing warnings remain) |
+| `npm run db:up` / `db:down` / `db:reset` | Compose lifecycle |
+| `npm run db:logs` / `db:psql` | Postgres inspection |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Architecture
 
-## Phase F real-Supabase mode
+- **`proxy.ts`** (Next 16's renamed `middleware.ts`) — single middleware
+  entrypoint. Responsibilities, in order: rate-limit state-changing API
+  calls per IP, mint + verify double-submit CSRF cookies, refresh the
+  Supabase session, and gate `(dashboard)/*` behind `requireUser()`.
+- **API routes** live under `app/api/**/route.ts`. Inputs are validated
+  with Zod schemas from `lib/schemas/`; mutations flow through Postgres
+  RPCs that enforce RLS.
+- **CSRF** — every non-auth API write requires an `x-sunext-csrf`
+  header matching the `sunext_csrf_token` httpOnly cookie. Browser
+  code uses `csrfFetch()` from `lib/csrf-client.ts` which attaches the
+  header automatically.
+- **Rate-limit** — `lib/ratelimit.ts` ships an in-memory token bucket
+  (5/min auth, 120/min write). Swap to Redis / upstash/ratelimit for
+  multi-instance deploys; the interface is the same.
+- **Logging** — `lib/logger.ts` emits JSON lines; server-side warning
+  on rate-limit exceed uses it.
 
-The app defaults to in-memory mock mode (`MOCK_SUPABASE=1` in `.env.local`). The local
-docker-compose stack runs only Postgres + PostgREST — auth, realtime, storage, and meta
-are intentionally NOT included because their per-image config drifts (env vars like
-`DATABASE_URL`, `API_EXTERNAL_URL`, `METRICS_JWT_SECRET`, `SECRET_KEY_BASE`, `APP_NAME`,
-`DB_SSL` change between tags). For those concerns, point `NEXT_PUBLIC_SUPABASE_URL` at a
-real Supabase Cloud project (or your own GoTrue + Realtime + Storage instances).
+## Security headers
 
-To exercise the real backend locally:
+Configured in `next.config.ts`. Every response carries:
 
-1. Run `npm run db:reset` — this wipes the compose volume, brings Postgres + PostgREST
-   back up, and applies the migrations (0001-0009 + 0010). RPCs `workspace_kpis` and
-   `workspace_workload`, the anon/authenticated/service_role roles, and RLS policies
-   are all live after this command.
-2. With Cloud (or a remote GoTrue): set `MOCK_SUPABASE=0` in `.env.local` and paste
-   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
-   `SUPABASE_SERVICE_ROLE_KEY` from your project. Restart `npm run dev` and sign in
-   via `/login` instead of relying on mock auto-login.
-3. To seed 8 deterministic test users against a remote GoTrue, run `npm run db:seed-auth`
-   after exporting `GOTRUE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (or paste them into
-   `.env.compose`).
+- `Content-Security-Policy` (default-src 'self', no framing)
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy` (camera/mic/geo denied)
+- `X-DNS-Prefetch-Control: off`
 
-To roll back to in-memory mock mode: set `MOCK_SUPABASE=1` (or any other value). Leave
-`.env.compose` alone — the app ignores it; only `.env.local` is read.
+`tests/e2e/security-headers.spec.ts` asserts these on every protected
+route so a regression in the headers config gets caught at e2e time.
+
+## Project layout
+
+```
+app/                    Next.js app router — pages, layouts, API routes
+components/             Shared UI components (organized by feature)
+lib/                    Pure helpers (schemas, csrf, ratelimit, logger)
+hooks/                  React Query hooks keyed by domain
+supabase/migrations/    0001-0012 SQL files (apply order; idempotent)
+tests/
+  unit/                 Vitest (schemas, csrf, ratelimit, logger)
+  e2e/                  Playwright (chromium + Pixel 7 projects)
+docs/                   Phase E / Phase F progress notes
+```
+
+## CI
+
+`.github/workflows/ci.yml` runs `typecheck + unit + build` then a
+separate Playwright job against a Postgres service. Reports upload on
+failure.

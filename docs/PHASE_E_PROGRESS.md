@@ -16,7 +16,9 @@
 | Layouts | `app/layout.tsx`, `app/(dashboard)/layout.tsx` | `QueryProvider` mounts globally; dashboard layout enforces `requireUser()` |
 | Hooks | `hooks/use-{projects,tasks,activity,notifications,stats,team,session}.ts` | TanStack Query wrappers with optimistic mutations where applicable |
 | Sign-out | `components/layout/sign-out-menu.tsx` | Client component; `POST /api/auth/sign-out` → `router.push("/login")` + `router.refresh()` |
-| Tests | `tests/e2e/**`, `tests/unit/**` | 32 Playwright specs + 16 vitest schema cases |
+| Tests | `tests/e2e/**`, `tests/unit/**` | 23 Playwright cases (chromium project) + 45 vitest cases (`schemas`, `csrf`, `ratelimit`, `logger`) |
+| Middleware | `proxy.ts` | Single Next 16 entrypoint: rate-limit → CSRF mint/verify → session refresh → route guard. CSRF uses double-submit cookies; rate-limit is in-memory token bucket (5/min auth, 120/min write). |
+| Logging | `lib/logger.ts` | JSON-line info/warn/error. Rate-limit 429 path emits `warn("rate-limit exceeded", …)`. |
 
 ## Route handlers
 
@@ -71,8 +73,8 @@ The helpers expose `subscribe()` / `unsubscribe()` and emit typed payloads; the 
 
 | Suite | Tool | Count | Notes |
 |-------|------|-------|-------|
-| E2E | Playwright | 32 | `tests/e2e/**.spec.ts` — chromium + pixel-7 projects |
-| Unit | Vitest | 16 | `tests/unit/schemas.test.ts` — covers every Zod schema the API depends on |
+| E2E | Playwright | 23 (chromium) + 23 (mobile) | `tests/e2e/*.spec.ts` — `security-headers` was added in the security followup |
+| Unit | Vitest | 45 | `tests/unit/{schemas,csrf,ratelimit,logger}.test.ts` |
 
 Run with:
 
