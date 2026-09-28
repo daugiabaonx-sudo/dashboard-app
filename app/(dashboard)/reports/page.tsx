@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -44,10 +45,22 @@ export default function ReportsPage() {
   const openCount = tasks.filter((t) => t.status !== "done").length;
   const blocked = tasks.filter((t) => t.blocked).length;
 
+  // Client-only timestamp to avoid SSR/CSR hydration mismatch (React #418).
+  // `now` is null on the server and during the first client render; it is set
+  // in useEffect, so the markup produced during SSR matches the initial
+  // hydration render exactly.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
+  const updatedLabel = now
+    ? new Date(now).toLocaleString("en-US", { dateStyle: "medium" })
+    : "";
+
   return (
     <div className="space-y-10 animate-fade-in">
       <PageHeader
-        eyebrow={`Last 8 weeks · Updated ${new Date().toLocaleString("en-US", { dateStyle: "medium" })}`}
+        eyebrow={`Last 8 weeks · Updated ${updatedLabel}`}
         title={<>Numbers, <span className="italic text-primary">honestly</span>.</>}
         description="What we shipped, what it cost, and where we're slipping. Pull a thread on any chart to inspect the underlying data."
         actions={null}
@@ -211,15 +224,21 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent className="divide-y divide-border">
             {projects.map((p) => {
-              const expected = Math.min(
-                100,
-                Math.max(
-                  0,
-                  ((Date.now() - new Date(p.startDate).getTime()) /
-                    (new Date(p.dueDate).getTime() - new Date(p.startDate).getTime())) *
-                    100,
-                ),
-              );
+              // `now` is null on the server and during hydration so SSR and the
+              // first client render produce identical markup. After mount, the
+              // effect above populates `now` and the real "expected" value
+              // appears without ever diverging from the server output.
+              const expected = (() => {
+                if (now === null) return p.progress;
+                const start = new Date(p.startDate).getTime();
+                const end = new Date(p.dueDate).getTime();
+                const span = end - start;
+                if (span <= 0) return p.progress;
+                return Math.min(
+                  100,
+                  Math.max(0, ((now - start) / span) * 100),
+                );
+              })();
               const variance = p.progress - expected;
               const tone =
                 variance > 10 ? "good" : variance > -10 ? "warning" : "critical";
