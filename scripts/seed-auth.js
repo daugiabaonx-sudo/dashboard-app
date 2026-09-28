@@ -1,18 +1,48 @@
 #!/usr/bin/env node
 // scripts/seed-auth.js
-// Provisions 8 deterministic auth.users rows via the GoTrue admin API after
-// `docker compose up -d` brings the stack online. Wired into `db:up` and
-// `db:reset` so `npm run db:up` is a single command developers can run.
+// Provisions 8 deterministic auth.users rows via the GoTrue admin API.
+// Use this against a Supabase Cloud project (or any external GoTrue
+// instance) — not against the local docker-compose stack, which only
+// runs Postgres + PostgREST.
 //
 // Reads env:
 //   GOTRUE_URL               (default http://127.0.0.1:9999)
 //   SUPABASE_URL             (default = GOTRUE_URL)
 //   SUPABASE_SERVICE_ROLE_KEY (REQUIRED — fails fast if missing)
 //
+// If SUPABASE_SERVICE_ROLE_KEY is not exported, fall back to the local
+// .env.compose file. This lets the script be invoked via `npm run db:seed-auth`
+// against Cloud credentials pasted into .env.local.
+//
 // Uses Node 20+ built-in fetch only. No dependencies.
+
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+
+function loadComposeEnv() {
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) return;
+  const composePath = join(ROOT, ".env.compose");
+  if (!existsSync(composePath)) return;
+  const text = readFileSync(composePath, "utf8");
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq < 0) continue;
+    const key = line.slice(0, eq).trim();
+    const value = line.slice(eq + 1).trim();
+    if (key && !(key in process.env)) {
+      process.env[key] = value;
+    }
+  }
+}
 
 const GOTRUE_URL = process.env.GOTRUE_URL || "http://127.0.0.1:9999";
 const SUPABASE_URL = process.env.SUPABASE_URL || GOTRUE_URL;
+loadComposeEnv();
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_SERVICE_ROLE_KEY) {

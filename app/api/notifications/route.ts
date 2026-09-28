@@ -3,19 +3,14 @@
 // PATCH /api/notifications — mark all read for current user.
 
 import { NextResponse } from "next/server";
-import { requireUser, getMockSignedInUserId } from "@/lib/auth/session";
+import { requireUser } from "@/lib/auth/session";
 import { listNotifications, markAllRead } from "@/lib/db/notifications";
-import { isMockMode } from "@/lib/supabase/env";
 
 export const dynamic = "force-dynamic";
 
-function resolveUserId(sessionUserId: string): string {
-  return isMockMode ? getMockSignedInUserId() ?? sessionUserId : sessionUserId;
-}
-
 export async function GET() {
   const session = await requireUser();
-  const userId = resolveUserId(session.userId);
+  const userId = session.userId;
   try {
     const items = await listNotifications(userId);
     return NextResponse.json(items);
@@ -27,7 +22,7 @@ export async function GET() {
 
 export async function PATCH() {
   const session = await requireUser();
-  const userId = resolveUserId(session.userId);
+  const userId = session.userId;
   try {
     await markAllRead(userId);
     return NextResponse.json({ ok: true });

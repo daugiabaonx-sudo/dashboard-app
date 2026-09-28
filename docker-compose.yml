@@ -1,16 +1,23 @@
-# Local Supabase stack for Phase E dev.
-# Use `npm run db:up` to start, `npm run db:down` to stop, `npm run db:reset` to wipe + reseed.
+# Local Postgres + PostgREST for Phase F dev.
+# Brings up the database and the REST query layer so the existing
+# 0001-0009 + 0010 migrations can be exercised end-to-end (RPCs,
+# RLS, public.workspace_kpis, public.workspace_workload).
 #
-# NOTE: This is a minimal, self-contained stack for local development only.
-# For production, use Supabase Cloud (https://supabase.com) or a managed instance.
+# Auth, Realtime, Storage, and Meta are intentionally NOT included
+# here — they need additional env-var config per service version
+# (DATABASE_URL/API_EXTERNAL_URL/METRICS_JWT_SECRET/SECRET_KEY_BASE
+# /APP_NAME/etc.) and drift on every image bump. Use Supabase Cloud
+# for those concerns, or run the in-memory mock with MOCK_SUPABASE=1.
 #
-# If you do not have Docker installed, set MOCK_SUPABASE=1 in .env.local and the
-# app will use an in-memory adapter (no real Postgres, no RLS verification).
+# Use `npm run db:up` to start, `npm run db:down` to stop,
+# `npm run db:reset` to wipe + reseed.
+
+name: sunext-supabase
 
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
-    container_name: sunext-postgres
+    container_name: sunext-db
     restart: unless-stopped
     ports:
       - "54322:5432"
@@ -19,7 +26,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     volumes:
-      - sunext-postgres-data:/var/lib/postgresql/data
+      - sunext-db-data:/var/lib/postgresql/data
       # postgres:16-alpine's entrypoint only processes FILES in this dir,
       # not subdirectories. We flatten migrations + seed into /tmp/sunext-initdb.
       - /tmp/sunext-initdb:/docker-entrypoint-initdb.d:ro
@@ -28,27 +35,31 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - sunext-net
 
-  # GoTrue-compatible auth (lightweight, no full Supabase Studio required for dev).
-  # For full Supabase locally, use `npx supabase start` after installing the CLI.
-  # This minimal setup gives us Postgres + a thin auth shim via the @supabase/ssr
-  # client pointed at Postgres directly when SUPABASE_AUTH_SHIM=1.
-  postgrest:
+  rest:
     image: postgrest/postgrest:v12.2.0
-    container_name: sunext-postgrest
+    container_name: sunext-rest
     restart: unless-stopped
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
     environment:
-      PGRST_DB_URI: postgres://postgres:postgres@postgres:5432/postgres
+      PGRST_DB_URI: postgres://postgres:postgres@db:5432/postgres
       PGRST_DB_SCHEMA: public
       PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: dev-only-do-not-use-in-prod
+      PGRST_JWT_SECRET: dev-only-do-not-use-in-prod-0001-0000-0000-0000-000000000abc
       PGRST_SERVER_PORT: 3001
     ports:
       - "3001:3001"
+    networks:
+      - sunext-net
+
+networks:
+  sunext-net:
+    driver: bridge
 
 volumes:
-  sunext-postgres-data:
+  sunext-db-data:
     driver: local

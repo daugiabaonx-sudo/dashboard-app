@@ -61,6 +61,7 @@ export async function getCurrentWorkspaceId(): Promise<string> {
   return explicit || DEFAULT_WORKSPACE_ID;
 }
 
+// Mock-mode only — every caller is gated by `isMockMode`, audit-verified at Phase F.
 export function getMockSignedInUserId(): string | null {
   return getSignedInUserId() ?? (isMockMode ? MOCK_DEFAULT_USER_ID : null);
 }

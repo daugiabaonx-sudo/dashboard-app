@@ -35,5 +35,7 @@ for (const f of files) {
 }
 copyFileSync(SEED_FILE, join(TARGET_DIR, "seed.sql"));
 console.log("  + seed.sql");
+copyFileSync(join(ROOT, ".env.compose"), join(TARGET_DIR, ".env.compose"));
+console.log("  + .env.compose");
 
 console.log(`Synced ${files.length} migrations + seed.sql → ${TARGET_DIR}`);
