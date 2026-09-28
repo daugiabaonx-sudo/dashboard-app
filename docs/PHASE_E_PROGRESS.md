@@ -16,7 +16,7 @@
 | Layouts | `app/layout.tsx`, `app/(dashboard)/layout.tsx` | `QueryProvider` mounts globally; dashboard layout enforces `requireUser()` |
 | Hooks | `hooks/use-{projects,tasks,activity,notifications,stats,team,session}.ts` | TanStack Query wrappers with optimistic mutations where applicable |
 | Sign-out | `components/layout/sign-out-menu.tsx` | Client component; `POST /api/auth/sign-out` → `router.push("/login")` + `router.refresh()` |
-| Tests | `tests/e2e/**`, `tests/unit/**` | 23 Playwright cases (chromium project) + 45 vitest cases (`schemas`, `csrf`, `ratelimit`, `logger`) |
+| Tests | `tests/e2e/**`, `tests/unit/**`, `tests/integration/**` | 23 Playwright cases (chromium project) + 220 vitest cases — 4 (legacy unit) + 7 (`lib/db/*` repository units) + 1 (`lib/auth/session` unit) + 3 (utility units) + 14 (route-handler integration) + 1 (`callRoute` harness) — covering all `lib/db/*` and `app/api/**` files at ≥88% lines |
 | Middleware | `proxy.ts` | Single Next 16 entrypoint: rate-limit → CSRF mint/verify → session refresh → route guard. CSRF uses double-submit cookies; rate-limit is in-memory token bucket (5/min auth, 120/min write). |
 | Logging | `lib/logger.ts` | JSON-line info/warn/error. Rate-limit 429 path emits `warn("rate-limit exceeded", …)`. |
 
@@ -74,14 +74,29 @@ The helpers expose `subscribe()` / `unsubscribe()` and emit typed payloads; the 
 | Suite | Tool | Count | Notes |
 |-------|------|-------|-------|
 | E2E | Playwright | 23 (chromium) + 23 (mobile) | `tests/e2e/*.spec.ts` — `security-headers` was added in the security followup |
-| Unit | Vitest | 45 | `tests/unit/{schemas,csrf,ratelimit,logger}.test.ts` |
+| Unit | Vitest | 80 | `tests/unit/{schemas,csrf,ratelimit,logger,db/*,auth/*,cn,format,semantic}.test.ts` — covers every `lib/db/*` function |
+| Integration | Vitest | 140 | `tests/integration/api/**.test.ts` + `_helpers/call-route.ts` — invokes every `app/api/**` route handler directly, mocks `requireUser` + db functions. Bypasses `proxy.ts` middleware (CSRF/rate-limit are E2E concerns). |
 
 Run with:
 
 ```bash
-npm run test:unit          # vitest
-npm run test:e2e           # playwright (auto-starts `next start`)
+npm run test:unit               # vitest, no coverage
+npm run test:unit:coverage      # vitest + v8 coverage, threshold ≥80%
+npm run test:e2e                # playwright (auto-starts `next start`)
 ```
+
+### Coverage gate
+
+ECC requires ≥80% coverage on `lib/**` + `app/api/**`. The current numbers:
+
+```
+All files          |   89.53 |   89.54 |   97.22 |   89.53 |
+lib/db/*           |     100 |   92.85 |     100 |     100 |
+lib/auth/*         |     100 |     100 |     100 |     100 |
+app/api/**         |     100 |   ~83   |     100 |     100 |
+```
+
+Enforced by `vitest.config.ts` thresholds AND `.github/workflows/ci.yml`'s `npm run test:unit:coverage` step — both fail-closed when coverage drops below 80% on any of {lines, functions, branches, statements}.
 
 ## How to switch off mock mode
 
