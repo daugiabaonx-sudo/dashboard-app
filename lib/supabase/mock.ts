@@ -36,6 +36,33 @@ const tasks = new Map(seedTasks.map((t) => [t.id, { ...t }]));
 const activities = seedActivities.map((a) => ({ ...a }));
 const notifications = seedNotifications.map((n) => ({ ...n }));
 
+// Lazy snake-case row caches. `from(table)` returns a MockFrom constructed
+// against the cached row array; subsequent mutations on that MockFrom mutate
+// the cache in place so the next `from(table)` call observes them.
+let projectRows: ProjectRow[] | null = null;
+let taskRows: TaskRow[] | null = null;
+let notificationRows: NotificationRow[] | null = null;
+let activityRows: ActivityRow[] | null = null;
+
+function getProjectRows(): ProjectRow[] {
+  if (!projectRows) projectRows = Array.from(projects.values()).map(toProjectRow);
+  return projectRows;
+}
+function getTaskRows(): TaskRow[] {
+  if (!taskRows) taskRows = Array.from(tasks.values()).map(toTaskRow);
+  return taskRows;
+}
+function getNotificationRows(): NotificationRow[] {
+  if (!notificationRows)
+    notificationRows = notifications.map((n, i) => toNotificationRow(n, i));
+  return notificationRows;
+}
+function getActivityRows(): ActivityRow[] {
+  if (!activityRows)
+    activityRows = activities.map((a, i) => toActivityRow(a, i));
+  return activityRows;
+}
+
 let signedInUserId: string | null = CURRENT_USER_ID;
 
 export function getSignedInUserId(): string | null {
@@ -272,8 +299,140 @@ function toActivityRow(a: (typeof activities)[number], idx: number): ActivityRow
   };
 }
 
+// ───────────────────────────────────────────────────────────────────────────
+// Mock pub/sub — mirrors the slice of Supabase Realtime that the dashboard
+// actually uses. `components/realtime/subscriptions.tsx` subscribes via
+// `.channel(name).on("postgres_changes", { event, schema, table, filter }, fn)`
+// and the invalidator closes over TanStack Query; here we record each
+// subscription in `__mockSubscriptions` keyed by channel name and replay
+// every table mutation through matching handlers as a Supabase-shaped
+// `{ eventType, schema, table, new, old }` payload. Synchronous by design —
+// `subscriptions.tsx` already wraps the consumer in a 150ms debounce so the
+// downstream invalidation coalesces bursts of mutations.
+// ───────────────────────────────────────────────────────────────────────────
+
+type BroadcastEventType = "INSERT" | "UPDATE" | "DELETE";
+
+interface PostgresChangesPayload {
+  eventType: BroadcastEventType;
+  schema: string;
+  table: string;
+  new: Record<string, unknown> | undefined;
+  old: Record<string, unknown> | undefined;
+}
+
+interface MockSubscription {
+  channelName: string;
+  table: string;
+  event: "*" | BroadcastEventType;
+  filterColumn: string | null;
+  filterValue: string | null;
+  handler: (payload: PostgresChangesPayload) => void;
+}
+
+const __mockSubscriptions: MockSubscription[] = [];
+
+function channelToTable(channelName: string): string | null {
+  // subscriptions.tsx uses channelNames.tasks / activity / notifications, each
+  // producing names like "tasks:ws_xxx" / "activity:ws_xxx" / "notifications:user_xxx".
+  const prefix = channelName.split(":")[0];
+  switch (prefix) {
+    case "tasks":
+      return "tasks";
+    case "activity":
+      return "activity_log";
+    case "notifications":
+      return "notifications";
+    default:
+      return null;
+  }
+}
+
+function __broadcast(
+  table: string,
+  eventType: BroadcastEventType,
+  newRow: Record<string, unknown> | undefined,
+  oldRow: Record<string, unknown> | undefined,
+): void {
+  for (const sub of __mockSubscriptions) {
+    if (sub.table !== table) continue;
+    if (sub.event !== "*" && sub.event !== eventType) continue;
+    if (sub.filterColumn !== null && sub.filterValue !== null) {
+      const candidate =
+        eventType === "DELETE" ? oldRow?.[sub.filterColumn] : newRow?.[sub.filterColumn];
+      if (candidate !== sub.filterValue) continue;
+    }
+    sub.handler({
+      eventType,
+      schema: "public",
+      table,
+      new: newRow,
+      old: oldRow,
+    });
+  }
+}
+
+interface MockChannelOptions {
+  event: "*" | BroadcastEventType;
+  schema: string;
+  table: string;
+  filter?: string;
+}
+
+function parseFilter(
+  filter: string | undefined,
+): { column: string | null; value: string | null } {
+  if (!filter) return { column: null, value: null };
+  // Supabase filter shape: "column=eq.value" or "column=eq.<value>" with
+  // dot-separated value (we only need eq). We split on "=eq." and keep the
+  // raw value (UUIDs, ints, etc.) as-is.
+  const idx = filter.indexOf("=eq.");
+  if (idx < 0) return { column: null, value: null };
+  return { column: filter.slice(0, idx), value: filter.slice(idx + 4) };
+}
+
+class MockChannel {
+  private pendingSub: MockSubscription | null = null;
+
+  constructor(public readonly name: string) {}
+
+  on(
+    _type: "postgres_changes",
+    options: MockChannelOptions,
+    handler: (payload: PostgresChangesPayload) => void,
+  ): this {
+    const { column, value } = parseFilter(options.filter);
+    const table = channelToTable(this.name) ?? options.table;
+    this.pendingSub = {
+      channelName: this.name,
+      table,
+      event: options.event,
+      filterColumn: column,
+      filterValue: value,
+      handler,
+    };
+    return this;
+  }
+
+  subscribe(): this {
+    if (this.pendingSub) {
+      __mockSubscriptions.push(this.pendingSub);
+      this.pendingSub = null;
+    }
+    return this;
+  }
+
+  unsubscribe(): void {
+    for (let i = __mockSubscriptions.length - 1; i >= 0; i--) {
+      if (__mockSubscriptions[i]!.channelName === this.name) {
+        __mockSubscriptions.splice(i, 1);
+      }
+    }
+  }
+}
+
 class MockFrom<T extends Record<string, unknown>> {
-  constructor(private rows: T[]) {}
+  constructor(private rows: T[], private table: string) {}
 
   select(_columns?: string): MockQuery<T> {
     return new MockQuery<T>(this.rows);
@@ -281,12 +440,18 @@ class MockFrom<T extends Record<string, unknown>> {
 
   insert(values: Partial<T> | Partial<T>[]): { select: () => MockQuery<T> } {
     const arr = Array.isArray(values) ? values : [values];
+    const inserted: T[] = [];
     for (const v of arr) {
       const id = (v as { id?: string }).id ?? crypto.randomUUID();
-      this.rows.push({ ...(v as T), id } as T);
+      const row = { ...(v as T), id } as T;
+      this.rows.push(row);
+      inserted.push(row);
+    }
+    for (const row of inserted) {
+      __broadcast(this.table, "INSERT", row as Record<string, unknown>, undefined);
     }
     return {
-      select: () => new MockQuery<T>(arr as T[]),
+      select: () => new MockQuery<T>(inserted),
     };
   }
 
@@ -298,7 +463,16 @@ class MockFrom<T extends Record<string, unknown>> {
     return {
       eq: (column: string, value: unknown) => {
         const matched = this.rows.filter((r) => r[column] === value);
-        for (const r of matched) Object.assign(r, values);
+        for (const r of matched) {
+          const original = { ...r };
+          Object.assign(r, values);
+          __broadcast(
+            this.table,
+            "UPDATE",
+            r as Record<string, unknown>,
+            original as Record<string, unknown>,
+          );
+        }
         return { select: () => new MockQuery<T>(matched) };
       },
     };
@@ -310,7 +484,15 @@ class MockFrom<T extends Record<string, unknown>> {
     return {
       eq: (column: string, value: unknown) => {
         const idx = this.rows.findIndex((r) => r[column] === value);
-        if (idx >= 0) this.rows.splice(idx, 1);
+        if (idx >= 0) {
+          const [removed] = this.rows.splice(idx, 1);
+          __broadcast(
+            this.table,
+            "DELETE",
+            undefined,
+            removed as Record<string, unknown>,
+          );
+        }
         return Promise.resolve({ error: null });
       },
     };
@@ -321,17 +503,17 @@ export const mockClient: SupabaseClient = {
   from(table: string): unknown {
     switch (table) {
       case "profiles":
-        return new MockFrom(Array.from(profiles.values()).map(toProfileRow));
+        return new MockFrom(Array.from(profiles.values()).map(toProfileRow), table);
       case "projects":
-        return new MockFrom(Array.from(projects.values()).map(toProjectRow));
+        return new MockFrom(getProjectRows(), table);
       case "tasks":
-        return new MockFrom(Array.from(tasks.values()).map(toTaskRow));
+        return new MockFrom(getTaskRows(), table);
       case "notifications":
-        return new MockFrom(notifications.map(toNotificationRow));
+        return new MockFrom(getNotificationRows(), table);
       case "activity_log":
-        return new MockFrom(activities.map(toActivityRow));
+        return new MockFrom(getActivityRows(), table);
       default:
-        return new MockFrom([]);
+        return new MockFrom([], table);
     }
   },
   rpc(_fn: string, _args?: Record<string, unknown>): Promise<{ data: unknown; error: null }> {
@@ -389,20 +571,11 @@ export const mockClient: SupabaseClient = {
       return { error: null };
     },
   },
-  channel(_name: string) {
-    return {
-      on() {
-        return this;
-      },
-      subscribe() {
-        return this;
-      },
-      unsubscribe() {
-        return this;
-      },
-    };
+  channel(name: string): MockChannel {
+    return new MockChannel(name);
   },
-  removeChannel(_ch: unknown) {
+  removeChannel(ch: unknown) {
+    if (ch instanceof MockChannel) ch.unsubscribe();
     return Promise.resolve("ok");
   },
 } as unknown as SupabaseClient;
