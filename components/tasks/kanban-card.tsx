@@ -10,7 +10,6 @@ import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useDeleteTask, useSetTaskStatus, useTasks } from "@/hooks/use-tasks";
-import { useSession } from "@/hooks/use-session";
 import { priorityLabel, priorityTone, statusLabel } from "@/lib/semantic";
 import { cn } from "@/lib/cn";
 import type { Task, TaskStatus } from "@/lib/types";
@@ -25,13 +24,14 @@ const STATUS_VALUES: TaskStatus[] = [
 
 interface KanbanCardProps {
   task: Task;
+  workspaceId: string;
 }
 
-export function KanbanCard({ task }: KanbanCardProps) {
-  const { data: session } = useSession();
-  const workspaceId = session?.userId ?? "anon";
+export function KanbanCard({ task, workspaceId }: KanbanCardProps) {
   // useTasks keeps the cache warm so optimistic updates land in the same
-  // list the rest of the page reads from.
+  // list the rest of the page reads from. The board passes the same
+  // workspaceId so all cards + the board share the ["tasks", workspaceId]
+  // cache entry instead of each card using a session-derived key.
   useTasks(workspaceId);
   const setStatus = useSetTaskStatus(workspaceId);
   const remove = useDeleteTask(workspaceId);

@@ -2,6 +2,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { csrfFetch } from "@/lib/csrf-client";
 import type { Notification } from "@/lib/types";
 
 async function fetchNotifications(): Promise<Notification[]> {
@@ -22,7 +23,7 @@ export function useMarkAllRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/notifications", { method: "PATCH" });
+      const res = await csrfFetch("/api/notifications", { method: "PATCH" });
       if (!res.ok) throw new Error("Failed to mark read");
       return;
     },

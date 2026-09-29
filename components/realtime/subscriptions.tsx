@@ -3,10 +3,12 @@
 // postgres_changes for tasks, activity_log, and notifications, and invalidates
 // matching TanStack Query caches on every event.
 //
-// Mock-mode behaviour: createSupabaseBrowserClient() returns an inert stub
-// (lib/supabase/mock.ts), so no realtime socket is opened. The component is
-// a no-op there — invalidation already happens through the existing REST
-// mutations and re-fetches.
+// Mock-mode behaviour: in mock mode we still attach channels to the mock
+// client (lib/supabase/mock.ts). Every MockFrom mutation broadcasts a
+// postgres_changes-shaped payload to those channels, so the invalidators
+// fire end-to-end — same payload shape real Supabase would deliver. E2E
+// tests rely on this path; production (real Supabase) goes through the
+// WebSocket bridge instead.
 
 "use client";
 
@@ -14,7 +16,6 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { isMockMode } from "@/lib/supabase/env";
 import { DEFAULT_WORKSPACE_ID } from "@/lib/constants";
 import { channelNames, makeDebouncedInvalidator } from "@/lib/realtime/channels";
 import { useSession } from "@/hooks/use-session";
@@ -82,7 +83,6 @@ export function RealtimeSubscriptions(): null {
   const { data: session } = useSession();
 
   useEffect(() => {
-    if (isMockMode) return undefined;
     if (!session) return undefined;
 
     const client = createSupabaseBrowserClient();

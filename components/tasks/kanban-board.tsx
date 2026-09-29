@@ -1,7 +1,10 @@
+"use client";
+
 // components/tasks/kanban-board.tsx
-// Kanban view for tasks. Reads from lib/data via the parent (server) and
-// renders one KanbanCard per task. The card is a client component that
-// wires status change + delete to /api/tasks.
+// Kanban view for tasks. Reads the live tasks list via TanStack Query so
+// realtime invalidations from the tasks channel refresh the columns without
+// a full page reload. `initialTasks` is the SSR seed; once the query
+// resolves we render the live data instead.
 
 import {
   Card,
@@ -10,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { statusLabel } from "@/lib/semantic";
+import { useTasks } from "@/hooks/use-tasks";
 import type { Task, TaskStatus } from "@/lib/types";
 import { KanbanCard } from "./kanban-card";
 
@@ -22,10 +26,14 @@ const COLUMNS: TaskStatus[] = [
 ];
 
 interface KanbanBoardProps {
-  tasks: Task[];
+  initialTasks: Task[];
+  workspaceId: string;
 }
 
-export function KanbanBoard({ tasks }: KanbanBoardProps) {
+export function KanbanBoard({ initialTasks, workspaceId }: KanbanBoardProps) {
+  const { data } = useTasks(workspaceId);
+  const tasks = data ?? initialTasks;
+
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5 items-start">
       {COLUMNS.map((status) => {
@@ -49,7 +57,9 @@ export function KanbanBoard({ tasks }: KanbanBoardProps) {
                   Nothing here
                 </div>
               ) : (
-                items.map((t) => <KanbanCard key={t.id} task={t} />)
+                items.map((t) => (
+                  <KanbanCard key={t.id} task={t} workspaceId={workspaceId} />
+                ))
               )}
             </CardContent>
           </Card>

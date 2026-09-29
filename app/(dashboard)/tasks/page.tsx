@@ -4,6 +4,7 @@ import { TaskRow } from "@/components/tasks/task-row";
 import { TasksToolbar } from "@/components/tasks/tasks-toolbar";
 import { PageHeader } from "@/components/layout/page-header";
 import { tasks, projects } from "@/lib/data";
+import { DEFAULT_WORKSPACE_ID } from "@/lib/constants";
 
 interface TasksPageProps {
   searchParams: Promise<{ view?: string }>;
@@ -32,7 +33,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       <TasksToolbar view={view} projects={projectOptions} />
 
       {view === "board" ? (
-        <KanbanBoard tasks={tasks} />
+        <KanbanBoard initialTasks={tasks} workspaceId={DEFAULT_WORKSPACE_ID} />
       ) : (
         <Card className="animate-fade-up opacity-0" style={{ animationDelay: "80ms" }}>
           <CardContent className="p-0">

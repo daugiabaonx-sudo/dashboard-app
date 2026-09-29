@@ -19,10 +19,11 @@ import {
 } from "@/components/ui/card";
 import { Badge, Dot } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
-import { projects, tasks, getKpis } from "@/lib/data";
+import { projects, tasks } from "@/lib/data";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useKpis } from "@/hooks/use-stats";
 
 const VELOCITY = [
   { week: "W-7", completed: 8, created: 14 },
@@ -36,7 +37,7 @@ const VELOCITY = [
 ];
 
 export default function ReportsPage() {
-  const kpis = getKpis();
+  const { data: kpis } = useKpis();
   const completionRate = Math.round(
     (tasks.filter((t) => t.status === "done").length / tasks.length) * 100,
   );
@@ -93,7 +94,7 @@ export default function ReportsPage() {
               Tasks completed
             </p>
             <p className="font-display text-[40px] font-normal leading-none tracking-[-0.02em] tabular-nums text-foreground">
-              {formatNumber(kpis[1]?.value ?? 0)}
+              {formatNumber(kpis?.[1]?.value ?? 0)}
             </p>
             <p className="text-[11px] text-muted-foreground">this week</p>
           </CardContent>

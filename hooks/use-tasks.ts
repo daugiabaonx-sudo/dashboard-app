@@ -5,6 +5,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { csrfFetch } from "@/lib/csrf-client";
 import type { Task, TaskStatus } from "@/lib/types";
 
 const KEYS = {
@@ -34,10 +35,9 @@ export function useSetTaskStatus(workspaceId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { id: string; status: TaskStatus; previous?: Task }) => {
-      const res = await fetch(`/api/tasks/${vars.id}/status`, {
+      const res = await csrfFetch(`/api/tasks/${vars.id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: vars.status }),
+        body: { status: vars.status },
       });
       if (!res.ok) throw new Error("Failed to update task status");
       return (await res.json()) as Task;
@@ -69,7 +69,7 @@ export function useDeleteTask(workspaceId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { id: string }) => {
-      const res = await fetch(`/api/tasks/${vars.id}`, { method: "DELETE" });
+      const res = await csrfFetch(`/api/tasks/${vars.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete task");
       return vars.id;
     },

@@ -1,3 +1,9 @@
+"use client";
+
+// components/dashboard/activity-feed.tsx
+// Live activity feed. Subscribes to /api/activity via TanStack Query so
+// realtime invalidations from the activity_log channel refresh the list.
+
 import {
   AlertCircle,
   CheckCircle2,
@@ -9,9 +15,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
-import { activities, findUser } from "@/lib/data";
+import { findUser } from "@/lib/data";
 import { formatRelative } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { useActivity } from "@/hooks/use-activity";
 
 const ICONS: Record<string, ComponentType<{ className?: string }>> = {
   task_created: Plus,
@@ -34,9 +41,44 @@ const TONE: Record<string, string> = {
 };
 
 export function ActivityFeed() {
+  const { data, isLoading, error } = useActivity();
+  const items = data ?? [];
+
+  if (isLoading) {
+    return (
+      <ul className="space-y-4">
+        {[0, 1, 2].map((i) => (
+          <li key={i} className="flex items-start gap-3">
+            <span className="size-8 shrink-0 rounded-full bg-secondary animate-pulse" />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3 w-2/3 rounded bg-secondary animate-pulse" />
+              <div className="h-3 w-1/3 rounded bg-secondary animate-pulse" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (error) {
+    return (
+      <p className="text-sm text-status-critical">
+        Couldn’t load recent activity.
+      </p>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Nothing has happened in the workspace yet.
+      </p>
+    );
+  }
+
   return (
     <ul className="space-y-4">
-      {activities.map((a) => {
+      {items.map((a) => {
         const actor = findUser(a.actorId);
         const Icon = ICONS[a.type] ?? Plus;
         return (
