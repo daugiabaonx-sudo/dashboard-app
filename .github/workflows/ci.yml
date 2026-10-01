@@ -1,0 +1,170 @@
+# CI for dashboard-app.
+#
+# Pipeline (matches the project's gating rules: typecheck + unit + build):
+#   1. typecheck — `tsc --noEmit`
+#   2. unit      — `vitest run` (fast inner loop, no coverage)
+#   3. coverage  — `vitest run --coverage` (same suite, gated at ≥80%)
+#   4. build     — `next build` (only runs once 1-3 pass)
+#   5. e2e       — Playwright against a live Postgres + mock-supabase
+#                  app. Runs ONLY after coverage passes so a coverage
+#                  regression short-circuits the long-running browser
+#                  suite before it consumes runner minutes.
+#
+# Postgres is provided as a service so the e2e tests can hit migrations
+# exactly as a developer would when running locally.
+#
+# The pre-deliverable realmode stack (`e2e-realmode` against docker-compose
+# + GoTrue + Realtime + Meta) was deliberately deferred — it adds ~25 min
+# per run and runs locally before each release. Re-enable when CI runner
+# quota allows, or wire to a self-hosted runner.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel an in-flight run when the same branch pushes a new commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npx tsc --noEmit
+
+  # Runs after typecheck succeeds. Cheap inner loop (no coverage), so
+  # it stays under the 5-minute budget regardless of suite size.
+  unit:
+    name: unit tests
+    runs-on: ubuntu-latest
+    needs: typecheck
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Vitest (no coverage)
+        run: npm run test:unit
+
+  # Coverage gates the pipeline. Fails closed at the ECC thresholds
+  # declared in vitest.config.ts (lines/functions/branches/statements
+  # ≥80%). Only after this passes does the build + e2e jobs unlock.
+  coverage:
+    name: coverage gate (≥80%, ECC)
+    runs-on: ubuntu-latest
+    needs: unit
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Vitest + v8 coverage
+        # vitest.config.ts thresholds fail-closed; CI stops here if a
+        # regression drops any metric below 80%.
+        run: npm run test:unit:coverage
+
+  build:
+    name: next build
+    runs-on: ubuntu-latest
+    needs: coverage
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Production build
+        env:
+          MOCK_SUPABASE: 1
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-replace-me
+        run: npm run build
+
+  # Playwright E2E runs ONLY after coverage passes. With the dependency
+  # chain `typecheck → unit → coverage → build → e2e`, a coverage miss
+  # short-circuits the ~20-minute browser suite before it consumes
+  # runner minutes.
+  e2e:
+    name: playwright e2e
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Install psql + Playwright browsers
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          npx playwright install --with-deps chromium
+      - name: Apply migrations to live postgres
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: |
+          for f in supabase/migrations/*.sql; do
+            echo "Applying $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
+          psql -v ON_ERROR_STOP=1 -f supabase/seed.sql
+      - name: Run Playwright (chromium only in CI)
+        env:
+          MOCK_SUPABASE: 1
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-replace-me
+        run: npx playwright test --project=chromium --workers=2
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7

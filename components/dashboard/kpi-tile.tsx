@@ -23,6 +23,8 @@ interface BaseProps {
 interface CompactProps extends BaseProps {
   /** Inline sparkline data — last N data points, oldest first. */
   sparkline?: number[];
+  /** Optional brand-gradient icon block rendered before the label (v2 only). */
+  iconBlock?: ReactNode;
 }
 
 const intentMap: Record<KpiIntent, { text: string; chipBg: string; dot: string }> = {
@@ -149,6 +151,7 @@ export function KpiStripTile({
   trend,
   intent = "neutral",
   sparkline,
+  iconBlock,
   href,
   delay = 0,
 }: CompactProps) {
@@ -171,9 +174,16 @@ export function KpiStripTile({
       style={{ animationDelay: `${delay * 60}ms` }}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-          {label}
-        </p>
+        <div className="flex items-center gap-2">
+          {iconBlock && (
+            <div className="flex size-8 items-center justify-center rounded-md bg-brand text-white shadow-soft">
+              {iconBlock}
+            </div>
+          )}
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            {label}
+          </p>
+        </div>
         <DeltaChip delta={delta} trend={trend} intent={intent} />
       </div>
       <div className="mt-3 flex items-end justify-between gap-3">

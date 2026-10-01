@@ -47,6 +47,9 @@
   --color-status-neutral-strong: var(--status-neutral-strong);
   --color-track: var(--track);
 
+  --color-sunext-purple: var(--sunext-purple);
+  --color-sunext-orange: var(--sunext-orange);
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -116,6 +119,15 @@
   /* Track — unfilled switch / progress rail, lighter than border so it
      stays visible on a card surface in both light + dark modes. */
   --track: oklch(0.9 0.006 80);
+
+  /* SUNEXT brand — purple → orange gradient; same stops across themes. */
+  --sunext-purple: #782DDC;
+  --sunext-orange: #FF860E;
+  --brand-gradient: linear-gradient(
+    129.3deg,
+    var(--sunext-purple) 0%,
+    var(--sunext-orange) 100%
+  );
 }
 
 /* Dark luxury — ink + warm shadow, same restrained indigo */
@@ -319,4 +331,28 @@ a:focus:not(:focus-visible) {
   background: var(--secondary);
   animation: skeleton-pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   border-radius: calc(var(--radius) - 4px);
+}
+
+/* SUNEXT brand utilities — gradient is theme-stable */
+.bg-brand {
+  background-image: var(--brand-gradient);
+}
+.text-brand {
+  background-image: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.border-brand {
+  border-image: var(--brand-gradient) 1;
+}
+
+/* Radial backdrop — donut card subtle warmth without being heavy */
+.bg-donut-radial {
+  background-image: radial-gradient(
+    circle at 30% 20%,
+    color-mix(in oklch, var(--sunext-purple) 12%, transparent) 0%,
+    transparent 60%
+  );
 }

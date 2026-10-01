@@ -57,6 +57,60 @@
       "search": "Search…"
     }
   },
+  "topBar": {
+    "searchPlaceholder": "Search tasks, employees, projects…",
+    "filters": "Filters"
+  },
+  "sidebar": {
+    "overview": "Overview",
+    "tasks": "Tasks",
+    "projects": "Projects",
+    "employees": "Employees",
+    "reports": "Reports",
+    "calendar": "Calendar",
+    "notifications": "Notifications",
+    "settings": "Settings"
+  },
+  "status": {
+    "inProgress": "In progress",
+    "done": "Done",
+    "overdue": "Overdue",
+    "blocked": "Blocked",
+    "notStarted": "Not started",
+    "todo": "To do",
+    "review": "In review"
+  },
+  "priority": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "kpiLabels": {
+    "total": "Total tasks",
+    "completed": "Completed",
+    "inProgress": "In progress",
+    "overdue": "Overdue",
+    "blocked": "Blocked",
+    "vsLastWeek": "vs last week",
+    "thisWeek": "this week",
+    "ofTotal": "of total"
+  },
+  "table": {
+    "employee": "Employee",
+    "project": "Project",
+    "task": "Task",
+    "priority": "Priority",
+    "progress": "Progress",
+    "deadline": "Deadline",
+    "status": "Status",
+    "issue": "Issue",
+    "taskProject": "Task / Project",
+    "assignee": "Assignee",
+    "time": "Time",
+    "severity": "Severity",
+    "days": "days",
+    "viewAll": "View all"
+  },
   "common": {
     "loading": "Loading…",
     "error": "Something went wrong",

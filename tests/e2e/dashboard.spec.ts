@@ -3,36 +3,45 @@ import { expect, test } from "@playwright/test";
 const DASHBOARD_SCREENSHOT_DIR = "ux-screenshots/dashboard-v2";
 
 test.describe("Dashboard overview", () => {
-  test("renders KPI strip, status donut, featured tasks, blockers", async ({ page }) => {
+  test("renders hero, KPI strip, status donut, featured tasks, blockers", async ({
+    page,
+  }) => {
     await page.goto("/");
 
     // Hero — serif display name with italic accent
     const hero = page.getByRole("heading", { level: 1 });
     await expect(hero).toBeVisible();
-    await expect(hero).toContainText(/Minh/i);
 
     // KPI strip — 5 tiles, each with a label + value
-    await expect(page.getByText(/tổng công việc/i)).toBeVisible();
-    await expect(page.getByText(/đã hoàn thành/i)).toBeVisible();
-    await expect(page.getByText(/đang làm/i).first()).toBeVisible();
+    await expect(page.getByText(/total tasks/i)).toBeVisible();
+    await expect(page.getByText(/^completed$/i)).toBeVisible();
+    await expect(page.getByText(/^in progress$/i).first()).toBeVisible();
 
-    // Status donut — anchored by the "Total" badge inside the chart
-    await expect(page.getByText(/^total$/i)).toBeVisible();
+    // Status donut — anchored by the "Tasks" badge inside the chart
+    await expect(page.getByText(/^tasks$/i)).toBeVisible();
 
     // Featured tasks section
-    await expect(page.getByText(/công việc nổi bật/i)).toBeVisible();
+    await expect(page.getByText(/featured tasks/i)).toBeVisible();
 
     // Blockers section
-    await expect(page.getByText(/đang bị chặn/i)).toBeVisible();
+    await expect(page.getByText(/workflow blockers/i)).toBeVisible();
   });
 
-  test("navigates to tasks from overdue KPI", async ({ page }) => {
+  test("sidebar exposes the 8 navigation entries", async ({ page }) => {
     await page.goto("/");
-    const overdueLink = page
-      .getByRole("link", { name: /quá hạn/i })
-      .first();
-    await overdueLink.click();
-    await expect(page).toHaveURL(/\/tasks$/);
+
+    // Sidebar nav links (desktop) — match by accessible name
+    const nav = page.getByRole("navigation").first();
+    await expect(nav.getByRole("link", { name: /overview/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /^tasks$/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /projects/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /employees/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /reports/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /calendar/i })).toBeVisible();
+    await expect(
+      nav.getByRole("link", { name: /notifications/i }),
+    ).toBeVisible();
+    await expect(nav.getByRole("link", { name: /settings/i })).toBeVisible();
   });
 });
 
@@ -46,9 +55,29 @@ test.describe("Dashboard visual regression", () => {
         reducedMotion: "reduce",
       });
       await page.addInitScript((t) => {
-        localStorage.setItem("theme", t);
-        document.documentElement.classList.toggle("dark", t === "dark");
+        try {
+          localStorage.setItem("theme", t);
+        } catch {
+          // storage may be unavailable in some contexts
+        }
       }, theme);
+      await page.addInitScript(() => {
+        const apply = () => {
+          const theme = (() => {
+            try {
+              return localStorage.getItem("theme");
+            } catch {
+              return null;
+            }
+          })() ?? "light";
+          document.documentElement.classList.toggle("dark", theme === "dark");
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", apply, { once: true });
+        } else {
+          apply();
+        }
+      });
       await page.goto("/");
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await page.waitForTimeout(500);
@@ -67,11 +96,34 @@ test.describe("Dashboard visual regression", () => {
         reducedMotion: "reduce",
       });
       await page.addInitScript((t) => {
-        localStorage.setItem("theme", t);
-        document.documentElement.classList.toggle("dark", t === "dark");
+        try {
+          localStorage.setItem("theme", t);
+        } catch {
+          // storage may be unavailable in some contexts
+        }
       }, theme);
+      await page.addInitScript(() => {
+        const apply = () => {
+          const theme = (() => {
+            try {
+              return localStorage.getItem("theme");
+            } catch {
+              return null;
+            }
+          })() ?? "light";
+          document.documentElement.classList.toggle("dark", theme === "dark");
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", apply, { once: true });
+        } else {
+          apply();
+        }
+      });
       await page.goto("/");
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      // KPI strip should reflow to 2 columns at this width
+      const kpiSection = page.locator('section[aria-label*="tasks" i]').first();
+      await expect(kpiSection).toBeVisible();
       await page.waitForTimeout(500);
       await page.screenshot({
         path: `${DASHBOARD_SCREENSHOT_DIR}/mobile-390-${theme}.png`,

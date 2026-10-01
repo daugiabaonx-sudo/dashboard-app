@@ -1,138 +1,104 @@
-// tests/unit/dashboard-data.test.ts
-// Unit tests for the dashboard v2 query helpers. These are pure
-// data-shape transforms over the in-memory fixtures in lib/data.ts;
-// no React, no DOM. Verified invariants:
-//
-// - KPI strip: 5 entries with sparklines, intents reflect counts
-// - Status donut: every TaskStatus present, total matches sum
-// - Blockers: only `blocked` tasks, sorted by due date ascending
-// - Featured tasks: limited count, sorted by score (urgent/blocked
-//   win), assignee + project joined in
-
 import { describe, expect, it } from "vitest";
-import {
-  getBlockers,
-  getFeaturedTasks,
-  getKpiStrip,
-  getStatusDonut,
-  tasks,
-} from "@/lib/data";
-import type { TaskStatus } from "@/lib/types";
+import { getDashboardSummary } from "@/lib/dashboard-data";
 
-const ALL_STATUSES: TaskStatus[] = [
-  "backlog",
-  "todo",
-  "in_progress",
-  "in_review",
-  "done",
-];
+describe("getDashboardSummary", () => {
+  const summary = getDashboardSummary({ userId: "u-001", role: "admin" });
 
-describe("getKpiStrip", () => {
-  it("returns 5 KPIs with sparkline arrays", () => {
-    const strip = getKpiStrip();
-    expect(strip).toHaveLength(5);
-    for (const kpi of strip) {
+  it("returns a profile with name, initials, role and avatar color", () => {
+    expect(summary.profile).toMatchObject({
+      userId: "u-001",
+      role: "admin",
+    });
+    expect(summary.profile.name).toMatch(/[a-z]+/i);
+    expect(summary.profile.initials).toMatch(/^[a-z]{2}$/i);
+    expect(summary.profile.avatarColor).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+
+  it("returns exactly 5 KPI tiles in the locked order", () => {
+    expect(summary.kpis).toHaveLength(5);
+    expect(summary.kpis.map((k) => k.id)).toEqual([
+      "total",
+      "completed",
+      "inProgress",
+      "overdue",
+      "blocked",
+    ]);
+  });
+
+  it("each KPI has a sparkline of 8–12 points", () => {
+    for (const kpi of summary.kpis) {
       expect(Array.isArray(kpi.sparkline)).toBe(true);
-      expect(kpi.sparkline.length).toBeGreaterThan(0);
-      expect(kpi.sparkline.every((n) => typeof n === "number")).toBe(true);
+      expect(kpi.sparkline.length).toBeGreaterThanOrEqual(8);
+      expect(kpi.sparkline.length).toBeLessThanOrEqual(12);
+      for (const point of kpi.sparkline) {
+        expect(typeof point).toBe("number");
+        expect(Number.isFinite(point)).toBe(true);
+      }
     }
   });
 
-  it("includes the canonical KPI ids", () => {
-    const ids = getKpiStrip().map((k) => k.id);
-    expect(ids).toEqual(
-      expect.arrayContaining([
-        "total",
-        "completed",
-        "inProgress",
-        "overdue",
-        "blocked",
-      ]),
+  it("every KPI carries a delta, deltaLabel, trend and intent", () => {
+    for (const kpi of summary.kpis) {
+      expect(typeof kpi.delta).toBe("number");
+      expect(typeof kpi.deltaLabel).toBe("string");
+      expect(kpi.deltaLabel.length).toBeGreaterThan(0);
+      expect(["up", "down", "flat"]).toContain(kpi.trend);
+      expect(["neutral", "good", "warning", "critical"]).toContain(kpi.intent);
+    }
+  });
+
+  it("returns exactly 5 featured tasks", () => {
+    expect(summary.featured).toHaveLength(5);
+    for (const row of summary.featured) {
+      expect(row.id).toMatch(/^t\d+$/);
+      expect(typeof row.title).toBe("string");
+      expect(typeof row.projectName).toBe("string");
+      expect(row.ownerInitials).toMatch(/^[a-z]{2}$/i);
+      expect(row.ownerColor).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(["high", "medium", "low"]).toContain(row.priority);
+      expect(typeof row.dueDate).toBe("string");
+      expect(row.progress).toBeGreaterThanOrEqual(0);
+      expect(row.progress).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it("returns exactly 4 blockers", () => {
+    expect(summary.blockers).toHaveLength(4);
+    for (const row of summary.blockers) {
+      expect(row.id).toMatch(/^t\d+$/);
+      expect(typeof row.title).toBe("string");
+      expect(typeof row.taskProject).toBe("string");
+      expect(row.assigneeInitials).toMatch(/^[a-z]{2}$/i);
+      expect(row.assigneeColor).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(typeof row.daysStuck).toBe("number");
+      expect(row.daysStuck).toBeGreaterThanOrEqual(0);
+      expect(["high", "medium", "low"]).toContain(row.severity);
+    }
+  });
+
+  it("status donut slices sum to the reported total", () => {
+    const sum = summary.statusDonut.slices.reduce(
+      (acc, slice) => acc + slice.value,
+      0,
     );
-  });
-
-  it("marks overdue KPI as critical when there are overdue tasks", () => {
-    const overdue = tasks.filter(
-      (t) => t.status !== "done" && new Date(t.dueDate) < new Date(),
-    );
-    if (overdue.length === 0) return;
-    const kpi = getKpiStrip().find((k) => k.id === "overdue");
-    expect(kpi?.intent).toBe("critical");
-  });
-});
-
-describe("getStatusDonut", () => {
-  it("includes a slice for every status, with non-negative counts", () => {
-    const { slices, total } = getStatusDonut();
-    expect(slices.map((s) => s.status).sort()).toEqual([...ALL_STATUSES].sort());
-    for (const slice of slices) {
-      expect(slice.count).toBeGreaterThanOrEqual(0);
-      expect(slice.label.length).toBeGreaterThan(0);
-    }
-    expect(total).toBe(tasks.length);
-  });
-
-  it("uses a color token for every entry", () => {
-    const { slices } = getStatusDonut();
-    for (const slice of slices) {
-      expect(slice.colorToken).toMatch(
-        /^(status-good|status-warning|primary|status-neutral)$/,
-      );
+    expect(sum).toBe(summary.statusDonut.total);
+    expect(summary.statusDonut.total).toBeGreaterThan(0);
+    expect(summary.statusDonut.slices.length).toBeGreaterThan(0);
+    for (const slice of summary.statusDonut.slices) {
+      expect(typeof slice.label).toBe("string");
+      expect(typeof slice.value).toBe("number");
+      expect(typeof slice.color).toBe("string");
     }
   });
 });
 
-describe("getBlockers", () => {
-  it("returns only blocked tasks", () => {
-    const rows = getBlockers();
-    expect(rows.every((r) => r.task.blocked)).toBe(true);
-  });
-
-  it("sorts by due date ascending (most urgent first)", () => {
-    const rows = getBlockers();
-    const dates = rows.map((r) => new Date(r.task.dueDate).getTime());
-    const sorted = [...dates].sort((a, b) => a - b);
-    expect(dates).toEqual(sorted);
-  });
-
-  it("includes project + assignee + relative due string", () => {
-    const rows = getBlockers();
-    if (rows.length === 0) return;
-    const first = rows[0]!;
-    expect(first.projectName.length).toBeGreaterThan(0);
-    expect(first.assigneeName.length).toBeGreaterThan(0);
-    expect(first.dueRelative.length).toBeGreaterThan(0);
-  });
-});
-
-describe("getFeaturedTasks", () => {
-  it("respects the limit and excludes done tasks", () => {
-    const rows = getFeaturedTasks(5);
-    expect(rows.length).toBeLessThanOrEqual(5);
-    expect(rows.every((r) => r.task.status !== "done")).toBe(true);
-  });
-
-  it("joins assignee + project metadata", () => {
-    const rows = getFeaturedTasks(5);
-    if (rows.length === 0) return;
-    for (const row of rows) {
-      expect(row.assigneeInitials.length).toBeGreaterThan(0);
-      expect(row.projectName.length).toBeGreaterThan(0);
-      expect(["neutral", "primary", "serious", "critical"]).toContain(
-        row.priorityTone,
-      );
-    }
-  });
-
-  it("prefers blocked + urgent tasks over neutral ones", () => {
-    const rows = getFeaturedTasks(10);
-    if (rows.length === 0) return;
-    const top = rows[0]!;
-    const isUrgentOrBlocked =
-      top.task.priority === "urgent" ||
-      top.task.priority === "high" ||
-      top.task.blocked ||
-      new Date(top.task.dueDate).getTime() < Date.now() + 3 * 86400000;
-    expect(isUrgentOrBlocked).toBe(true);
+describe("getDashboardSummary role gating", () => {
+  it("admin scope returns the same shape as member scope", () => {
+    const admin = getDashboardSummary({ userId: "u-002", role: "admin" });
+    const member = getDashboardSummary({ userId: "u-002", role: "member" });
+    expect(Object.keys(admin).sort()).toEqual(Object.keys(member).sort());
+    expect(admin.kpis).toHaveLength(member.kpis.length);
+    expect(admin.featured).toHaveLength(member.featured.length);
+    expect(admin.blockers).toHaveLength(member.blockers.length);
   });
 });

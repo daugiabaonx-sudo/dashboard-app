@@ -11,6 +11,20 @@ export default async function DashboardLayout({
   children: ReactNode;
 }) {
   await requireUser();
+  // When the v2 dashboard flag is on, the v2 page renders its own
+  // sidebar + top bar inside its composition. The shared layout only
+  // owns the chrome for v1.
+  const v2 = process.env.NEXT_PUBLIC_DASHBOARD_V2 === "1";
+  if (v2) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <main className="px-4 pb-6 pt-4 lg:px-8 lg:pb-8 max-w-[1600px] mx-auto">
+          {children}
+        </main>
+        <Toaster richColors position="top-right" />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="hidden lg:block lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-64">

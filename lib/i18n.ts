@@ -1,23 +1,20 @@
 // Lightweight, dependency-free i18n for the dashboard refactor.
 //
-// Phase 1: synchronous lookup against messages/{locale}.json. Locale is
-// resolved from a cookie set by the header (see app/(dashboard)/layout.tsx).
-//
-// Phase 2+: swap for `next-intl` if the app grows beyond the dashboard
-// route and needs pluralization / formatting helpers. The shape of the
-// keys here is intentionally compatible with next-intl's nested keys.
+// Phase 1: synchronous lookup against messages/en.json. Locale resolution
+// is a constant today — the dashboard ships English-only. The shape of
+// the keys here is intentionally compatible with next-intl's nested keys
+// if a second locale is reintroduced later.
 
-import vi from "@/messages/vi.json";
 import en from "@/messages/en.json";
 
-export const LOCALES = ["vi", "en"] as const;
+export const LOCALES = ["en"] as const;
 export type Locale = (typeof LOCALES)[number];
-export const DEFAULT_LOCALE: Locale = "vi";
+export const DEFAULT_LOCALE: Locale = "en";
 
-const MESSAGES: Record<Locale, { [key: string]: unknown }> = { vi, en };
+const MESSAGES: Record<Locale, { [key: string]: unknown }> = { en };
 
 export function isLocale(value: string | undefined | null): value is Locale {
-  return value === "vi" || value === "en";
+  return value === "en";
 }
 
 export function getMessages(locale: Locale): Record<string, unknown> {

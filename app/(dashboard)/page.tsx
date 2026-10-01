@@ -1,3 +1,8 @@
+// Home page — switcher between v1 and v2.
+// Set `NEXT_PUBLIC_DASHBOARD_V2=1` to opt into the v2 composition under
+// `app/(dashboard)/v2/page.tsx`. The v1 render is kept inline so the
+// default deploy stays stable while v2 lands.
+
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import {
@@ -27,6 +32,7 @@ import {
   type Locale,
 } from "@/lib/i18n";
 import { formatDate } from "@/lib/format";
+import PageV2 from "./v2/page";
 
 const TODAY = new Date();
 
@@ -54,7 +60,7 @@ const KPI_HREF: Record<string, string> = {
   blocked: "/tasks?filter=blocked",
 };
 
-export default function DashboardPage() {
+function PageV1() {
   const locale: Locale = DEFAULT_LOCALE;
   if (!isLocale(locale)) throw new Error("Invalid locale");
   const { t } = makeTranslator(locale);
@@ -202,4 +208,9 @@ export default function DashboardPage() {
       </section>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  const v2 = process.env.NEXT_PUBLIC_DASHBOARD_V2 === "1";
+  return v2 ? <PageV2 /> : <PageV1 />;
 }
