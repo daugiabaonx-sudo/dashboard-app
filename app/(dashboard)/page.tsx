@@ -1,216 +1,103 @@
-// Home page — switcher between v1 and v2.
-// Set `NEXT_PUBLIC_DASHBOARD_V2=1` to opt into the v2 composition under
-// `app/(dashboard)/v2/page.tsx`. The v1 render is kept inline so the
-// default deploy stays stable while v2 lands.
+// Home page — v2 composition. Owns its own sidebar + top bar + content
+// shell; the shared (dashboard) layout skips the v1 chrome.
 
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { KpiStripTile } from "@/components/dashboard/kpi-tile";
-import { StatusDonut } from "@/components/dashboard/status-donut";
-import { BlockersTable } from "@/components/dashboard/blockers-table";
-import { FeaturedTasksTable } from "@/components/dashboard/featured-tasks-table";
-import { WelcomeBanner } from "@/components/dashboard/welcome-banner";
-import { FilterChip } from "@/components/dashboard/filter-chip";
-import {
-  getBlockers,
-  getFeaturedTasks,
-  getKpiStrip,
-  getStatusDonut,
-} from "@/lib/data";
-import {
-  DEFAULT_LOCALE,
-  isLocale,
-  makeTranslator,
-  type Locale,
-} from "@/lib/i18n";
+import { Sidebar } from "@/components/dashboard-v2/sidebar";
+import { TopBar } from "@/components/dashboard-v2/top-bar";
+import { WelcomeBanner } from "@/components/dashboard-v2/welcome-banner";
+import { KpiStrip } from "@/components/dashboard-v2/kpi-strip";
+import { FeaturedTasks } from "@/components/dashboard-v2/featured-tasks";
+import { StatusDonutCard } from "@/components/dashboard-v2/status-donut-card";
+import { BlockersTable } from "@/components/dashboard-v2/blockers-table";
+import { getDashboardSummary } from "@/lib/dashboard-data";
+import { DEFAULT_LOCALE, makeTranslator } from "@/lib/i18n";
 import { formatDate } from "@/lib/format";
-import PageV2 from "./v2/page";
-
-const TODAY = new Date();
-
-const KPI_LABEL_KEY: Record<string, string> = {
-  total: "total",
-  completed: "completed",
-  inProgress: "inProgress",
-  overdue: "overdue",
-  blocked: "blocked",
-};
-
-const KPI_DELTA_KEY: Record<string, string> = {
-  total: "vsLastMonth",
-  completed: "thisWeek",
-  inProgress: "vsYesterday",
-  overdue: "needsAttention",
-  blocked: "next7Days",
-};
-
-const KPI_HREF: Record<string, string> = {
-  total: "/projects",
-  completed: "/tasks?status=done",
-  inProgress: "/tasks?status=in_progress",
-  overdue: "/tasks?filter=overdue",
-  blocked: "/tasks?filter=blocked",
-};
-
-function PageV1() {
-  const locale: Locale = DEFAULT_LOCALE;
-  if (!isLocale(locale)) throw new Error("Invalid locale");
-  const { t } = makeTranslator(locale);
-
-  const kpis = getKpiStrip();
-  const { slices, total } = getStatusDonut();
-  const blockers = getBlockers();
-  const featured = getFeaturedTasks(5);
-
-  const filterNodes = (
-    <>
-      <FilterChip icon="calendar" label={t("dashboard.filters.thisWeek")} />
-      <FilterChip icon="users" label={t("dashboard.filters.allTeams")} />
-      <FilterChip icon="sliders" label={t("dashboard.filters.allProjects")} />
-    </>
-  );
-
-  return (
-    <div className="space-y-8 animate-fade-in">
-      <WelcomeBanner
-        greeting={t("dashboard.welcome.hello")}
-        name={t("dashboard.greeting.name")}
-        subtitle={t("dashboard.welcome.subtitle")}
-        date={formatDate(TODAY.toISOString(), "EEEE, d 'Tháng' M, yyyy")}
-        motivational={t("dashboard.welcome.motivational")}
-        filters={filterNodes}
-      />
-
-      {/* KPI strip — 5 tiles across on desktop, 2-col on mobile */}
-      <section
-        className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5"
-        aria-label={t("common.viewAll")}
-      >
-        {kpis.map((k, i) => (
-          <KpiStripTile
-            key={k.id}
-            label={t(`dashboard.kpi.${KPI_LABEL_KEY[k.id] ?? k.id}`)}
-            value={k.value}
-            delta={k.delta}
-            deltaLabel={t(`dashboard.kpi.${KPI_DELTA_KEY[k.id] ?? "thisWeek"}`)}
-            trend={k.trend}
-            intent={k.intent}
-            sparkline={k.sparkline}
-            href={KPI_HREF[k.id]}
-            delay={i}
-          />
-        ))}
-      </section>
-
-      {/* Section 1 — Featured tasks (wide) + Status donut (small) */}
-      <section className="grid gap-3 lg:grid-cols-12">
-        <Card
-          className="lg:col-span-8 animate-fade-up opacity-0"
-          style={{ animationDelay: "120ms" }}
-        >
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle className="font-display text-xl font-normal tracking-tight">
-                  {t("dashboard.featured.title")}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {t("dashboard.featured.subtitle")}
-                </CardDescription>
-              </div>
-              <Link
-                href="/tasks"
-                className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-              >
-                {t("dashboard.featured.viewAll")}{" "}
-                <ArrowRight className="size-3" aria-hidden />
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <FeaturedTasksTable
-              rows={featured}
-              emptyMessage={t("dashboard.featured.empty")}
-            />
-          </CardContent>
-        </Card>
-
-        <Card
-          className="lg:col-span-4 animate-fade-up opacity-0"
-          style={{ animationDelay: "160ms" }}
-        >
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle className="font-display text-xl font-normal tracking-tight">
-                  {t("dashboard.status.title")}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {t("dashboard.status.subtitle")}
-                </CardDescription>
-              </div>
-              <Badge tone="neutral" size="sm">
-                {t("dashboard.filters.allProjects")}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <StatusDonut
-              slices={slices}
-              total={total}
-              withAmounts="both"
-              centerLabel={t("dashboard.status.total")}
-            />
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Section 2 — Blockers full width */}
-      <section>
-        <Card
-          className="animate-fade-up opacity-0"
-          style={{ animationDelay: "200ms" }}
-        >
-          <CardHeader>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle className="font-display text-xl font-normal tracking-tight">
-                  {t("dashboard.blockers.title")}
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  {t("dashboard.blockers.subtitle")}
-                </CardDescription>
-              </div>
-              <Link
-                href="/tasks?filter=blocked"
-                className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-              >
-                {t("dashboard.blockers.viewAll")}{" "}
-                <ArrowRight className="size-3" aria-hidden />
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <BlockersTable
-              rows={blockers}
-              emptyMessage={t("dashboard.blockers.empty")}
-            />
-          </CardContent>
-        </Card>
-      </section>
-    </div>
-  );
-}
 
 export default function DashboardPage() {
-  const v2 = process.env.NEXT_PUBLIC_DASHBOARD_V2 === "1";
-  return v2 ? <PageV2 /> : <PageV1 />;
+  const summary = getDashboardSummary({ userId: "u1", role: "admin" });
+  const { t } = makeTranslator(DEFAULT_LOCALE);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-60 lg:block">
+        <Sidebar
+          labels={{
+            overview: t("sidebar.overview"),
+            tasks: t("sidebar.tasks"),
+            projects: t("sidebar.projects"),
+            employees: t("sidebar.employees"),
+            reports: t("sidebar.reports"),
+            calendar: t("sidebar.calendar"),
+            notifications: t("sidebar.notifications"),
+            settings: t("sidebar.settings"),
+            statusOk: "All systems operational",
+            statusHint: "Realtime sync active · last incident 14d ago",
+          }}
+        />
+      </div>
+      <div className="lg:pl-60">
+        <TopBar
+          profile={summary.profile}
+          labels={{
+            searchPlaceholder: t("topBar.searchPlaceholder"),
+            filters: t("topBar.filters"),
+            thisWeek: t("dashboard.filters.thisWeek"),
+            allTeams: t("dashboard.filters.allTeams"),
+            allProjects: t("dashboard.filters.allProjects"),
+          }}
+        />
+        <main className="mx-auto max-w-[1440px] space-y-6 px-4 pb-8 pt-6 lg:px-8">
+          <WelcomeBanner
+            name={summary.profile.name}
+            date={formatDate(new Date().toISOString(), "EEEE, MMM d")}
+            labels={{
+              hello: t("dashboard.welcome.hello"),
+              subtitle: t("dashboard.welcome.subtitle"),
+              motivational: t("dashboard.welcome.motivational"),
+            }}
+          />
+          <KpiStrip kpis={summary.kpis} />
+          <section className="grid gap-3 lg:grid-cols-12">
+            <div className="lg:col-span-8">
+              <FeaturedTasks
+                rows={summary.featured}
+                labels={{
+                  title: t("dashboard.featured.title"),
+                  subtitle: t("dashboard.featured.subtitle"),
+                  viewAll: t("dashboard.featured.viewAll"),
+                  employee: t("table.employee"),
+                  project: t("table.project"),
+                  task: t("table.task"),
+                  priority: t("table.priority"),
+                  progress: t("table.progress"),
+                  deadline: t("table.deadline"),
+                  empty: t("dashboard.featured.empty"),
+                }}
+              />
+            </div>
+            <div className="lg:col-span-4">
+              <StatusDonutCard
+                donut={summary.statusDonut}
+                labels={{
+                  title: t("dashboard.status.title"),
+                  subtitle: t("dashboard.status.subtitle"),
+                  total: t("dashboard.status.total"),
+                }}
+              />
+            </div>
+          </section>
+          <BlockersTable
+            rows={summary.blockers}
+            labels={{
+              title: t("dashboard.blockers.title"),
+              subtitle: t("dashboard.blockers.subtitle"),
+              viewAll: t("dashboard.blockers.viewAll"),
+              empty: t("dashboard.blockers.empty"),
+              severity: t("priority.high").replace(/^./, (c) => c.toLowerCase()),
+              days: t("table.days"),
+            }}
+          />
+        </main>
+      </div>
+    </div>
+  );
 }

@@ -1,22 +1,12 @@
 // tests/e2e/dashboard-v2.spec.ts
-// Visual-only spec for the v2 dashboard. Gated by NEXT_PUBLIC_DASHBOARD_V2=1
-// (set when the spec is invoked). Captures 6 screenshots — desktop / tablet /
-// mobile × light / dark — and asserts no hydration error or console error
-// fires. Uses the MOCK_SUPABASE=1 proxy auto-login so `/` lands on the
-// dashboard directly.
+// Visual-only spec for the home page (now the v2 composition).
+// Captures 6 screenshots — desktop / tablet / mobile × light / dark — and
+// asserts no hydration error or console error fires. Uses the MOCK_SUPABASE=1
+// proxy auto-login so `/` lands on the dashboard directly.
 
 import { expect, test } from "@playwright/test";
 
 const SCREENSHOT_DIR = "ux-screenshots/dashboard-v2";
-
-test.beforeAll(() => {
-  if (process.env.NEXT_PUBLIC_DASHBOARD_V2 !== "1") {
-    throw new Error(
-      "dashboard-v2.spec.ts requires NEXT_PUBLIC_DASHBOARD_V2=1. " +
-        "Re-run with that env var set.",
-    );
-  }
-});
 
 const VIEWPORTS = [
   { id: "desktop-1440", width: 1440, height: 900 },
