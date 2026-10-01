@@ -4,6 +4,7 @@ import type {
   Notification,
   Project,
   Task,
+  TaskStatus,
   TeamWorkload,
   User,
 } from "./types";
@@ -544,4 +545,221 @@ export function findTask(id: string): Task | undefined {
 
 export function projectTasks(projectId: string): Task[] {
   return tasks.filter((t) => t.projectId === projectId);
+}
+
+// ─── Dashboard v2 helpers ──────────────────────────────────────────────
+
+export interface DashboardKpiStripItem {
+  id: string;
+  label: string;
+  value: number;
+  delta: number;
+  deltaLabel: string;
+  trend: "up" | "down" | "flat";
+  intent: "neutral" | "good" | "warning" | "critical";
+  sparkline: number[];
+}
+
+const SPARKLINE_WEEK = [12, 18, 16, 22, 19, 26, 24];
+const SPARKLINE_GROW = [4, 6, 5, 9, 12, 14, 18];
+const SPARKLINE_STEADY = [10, 11, 10, 12, 11, 13, 12];
+const SPARKLINE_DECAY = [22, 19, 15, 14, 12, 10, 8];
+const SPARKLINE_ALERT = [1, 2, 1, 3, 2, 4, 6];
+
+export function getKpiStrip(): DashboardKpiStripItem[] {
+  const completed = tasks.filter((t) => t.status === "done").length;
+  const inProgress = tasks.filter((t) => t.status === "in_progress").length;
+  const overdue = tasks.filter(
+    (t) => t.status !== "done" && new Date(t.dueDate) < new Date(),
+  ).length;
+  const blocked = tasks.filter((t) => t.blocked).length;
+  return [
+    {
+      id: "total",
+      label: "Tổng công việc",
+      value: tasks.length,
+      delta: 12,
+      deltaLabel: "so với tuần trước",
+      trend: "up",
+      intent: "neutral",
+      sparkline: SPARKLINE_WEEK,
+    },
+    {
+      id: "completed",
+      label: "Đã hoàn thành",
+      value: completed,
+      delta: 8,
+      deltaLabel: "tuần này",
+      trend: "up",
+      intent: "good",
+      sparkline: SPARKLINE_GROW,
+    },
+    {
+      id: "inProgress",
+      label: "Đang thực hiện",
+      value: inProgress,
+      delta: 5,
+      deltaLabel: "tổng công việc",
+      trend: "down",
+      intent: "neutral",
+      sparkline: SPARKLINE_STEADY,
+    },
+    {
+      id: "overdue",
+      label: "Trễ hạn",
+      value: overdue,
+      delta: 3,
+      deltaLabel: "tổng công việc",
+      trend: "up",
+      intent: "critical",
+      sparkline: SPARKLINE_ALERT,
+    },
+    {
+      id: "blocked",
+      label: "Bị chặn",
+      value: blocked,
+      delta: 20,
+      deltaLabel: "tổng công việc",
+      trend: "down",
+      intent: "good",
+      sparkline: SPARKLINE_DECAY,
+    },
+  ];
+}
+
+export interface StatusDonutSlice {
+  status: TaskStatus;
+  label: string;
+  count: number;
+  colorToken: "status-good" | "status-warning" | "primary" | "status-neutral";
+}
+
+export function getStatusDonut(): {
+  slices: StatusDonutSlice[];
+  total: number;
+} {
+  const order: TaskStatus[] = ["done", "in_review", "in_progress", "todo", "backlog"];
+  const colorToken: Record<TaskStatus, StatusDonutSlice["colorToken"]> = {
+    done: "status-good",
+    in_review: "status-warning",
+    in_progress: "primary",
+    todo: "status-neutral",
+    backlog: "status-neutral",
+  };
+  const slices = order.map((status) => ({
+    status,
+    label: statusLabel(status),
+    count: tasks.filter((t) => t.status === status).length,
+    colorToken: colorToken[status],
+  }));
+  return {
+    slices,
+    total: slices.reduce((acc, s) => acc + s.count, 0),
+  };
+}
+
+export interface BlockerRow {
+  task: Task;
+  projectName: string;
+  assigneeName: string;
+  dueRelative: string;
+}
+
+export function getBlockers(): BlockerRow[] {
+  const now = Date.now();
+  return tasks
+    .filter((t) => t.blocked)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .map((task) => {
+      const project = projects.find((p) => p.id === task.projectId);
+      const assignee = users.find((u) => u.id === task.assigneeId);
+      const daysUntilDue = Math.round(
+        (new Date(task.dueDate).getTime() - now) / 86400000,
+      );
+      const dueRelative =
+        daysUntilDue < 0
+          ? `${Math.abs(daysUntilDue)}d overdue`
+          : daysUntilDue === 0
+            ? "Due today"
+            : `${daysUntilDue}d left`;
+      return {
+        task,
+        projectName: project?.name ?? "—",
+        assigneeName: assignee?.name ?? "Unassigned",
+        dueRelative,
+      };
+    });
+}
+
+export interface FeaturedTaskRow {
+  task: Task;
+  projectName: string;
+  assigneeInitials: string;
+  assigneeColor: string;
+  assigneeName: string;
+  priorityTone: "neutral" | "primary" | "serious" | "critical";
+}
+
+export function getFeaturedTasks(limit = 5): FeaturedTaskRow[] {
+  const now = Date.now();
+  return [...tasks]
+    .filter((t) => t.status !== "done")
+    .map((task) => {
+      const due = new Date(task.dueDate).getTime();
+      const daysUntilDue = (due - now) / 86400000;
+      // Higher score = featured sooner.
+      let score = 0;
+      if (task.priority === "urgent") score += 100;
+      else if (task.priority === "high") score += 60;
+      else if (task.priority === "medium") score += 30;
+      if (daysUntilDue < 0) score += 80;
+      else if (daysUntilDue <= 3) score += 40;
+      else if (daysUntilDue <= 7) score += 20;
+      if (task.blocked) score += 50;
+      return { task, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ task }) => {
+      const project = projects.find((p) => p.id === task.projectId);
+      const assignee = users.find((u) => u.id === task.assigneeId);
+      return {
+        task,
+        projectName: project?.name ?? "—",
+        assigneeInitials: assignee?.initials ?? "??",
+        assigneeColor: assignee?.avatarColor ?? "#94a3b8",
+        assigneeName: assignee?.name ?? "Unassigned",
+        priorityTone: priorityTone(task.priority),
+      };
+    });
+}
+
+function statusLabel(status: TaskStatus): string {
+  switch (status) {
+    case "backlog":
+      return "Tồn đọng";
+    case "todo":
+      return "Cần làm";
+    case "in_progress":
+      return "Đang làm";
+    case "in_review":
+      return "Đang duyệt";
+    case "done":
+      return "Hoàn thành";
+  }
+}
+
+function priorityTone(
+  priority: "low" | "medium" | "high" | "urgent",
+): "neutral" | "primary" | "serious" | "critical" {
+  switch (priority) {
+    case "low":
+      return "neutral";
+    case "medium":
+      return "primary";
+    case "high":
+      return "serious";
+    case "urgent":
+      return "critical";
+  }
 }

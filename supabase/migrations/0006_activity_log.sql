@@ -18,10 +18,12 @@ create index if not exists activity_workspace_idx
 
 alter table public.activity_log enable row level security;
 
+drop policy if exists "activity_member_select" on public.activity_log;
 create policy "activity_member_select"
   on public.activity_log for select
   using (public.is_workspace_member(workspace_id));
 
+drop policy if exists "activity_member_insert" on public.activity_log;
 create policy "activity_member_insert"
   on public.activity_log for insert
   with check (public.is_workspace_member(workspace_id));

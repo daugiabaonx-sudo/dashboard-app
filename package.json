@@ -15,9 +15,13 @@
     "db:sync": "node scripts/db-sync.js",
     "db:up": "node scripts/db-sync.js && docker compose up -d",
     "db:down": "docker compose down",
-    "db:reset": "node scripts/db-sync.js && docker compose down -v && docker compose up -d",
-    "db:logs": "docker compose logs -f postgres",
-    "db:psql": "docker compose exec postgres psql -U postgres -d postgres"
+    "db:wait": "node scripts/wait-for-stack.js",
+    "db:seed-auth": "node scripts/seed-auth.js",
+    "db:gen-keys": "node scripts/gen-keys.js",
+    "db:reset": "node scripts/db-sync.js && node scripts/gen-keys.js && docker compose down -v && docker compose up -d && npm run db:wait",
+    "db:stack": "npm run db:reset && npm run db:seed-auth",
+    "db:logs": "docker compose logs -f db",
+    "db:psql": "docker compose exec db psql -U postgres -d postgres"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

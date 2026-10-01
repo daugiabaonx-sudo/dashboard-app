@@ -37,6 +37,7 @@ create trigger tasks_touch before update on public.tasks
 
 alter table public.tasks enable row level security;
 
+drop policy if exists "tasks_member_all" on public.tasks;
 create policy "tasks_member_all"
   on public.tasks for all
   using (public.is_workspace_member(workspace_id))

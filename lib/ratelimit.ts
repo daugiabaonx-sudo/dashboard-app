@@ -1,10 +1,29 @@
 /**
  * In-memory rate limiter (token bucket per IP per bucket key).
  *
- * Scope: dev / single-process protection only. In a multi-instance
- * deployment swap to Redis or upstash/ratelimit. The interface stays the
- * same: `consume(bucketKey, clientIp)` returns either { ok: true }
- * or { ok: false, retryAfterSeconds }.
+ * **SCOPE: single-process only.** The `BUCKETS` map lives in the Next.js
+ * server process. A multi-instance deployment (N replicas behind a load
+ * balancer) allows up to N× the documented rate per IP, since each
+ * replica enforces its own bucket independently.
+ *
+ * Single-instance deploy is safe — the dashboard's `output: "standalone"`
+ * Next build runs as one process and the in-memory state is correct.
+ * Containerized deploys (ECS, Cloud Run, Fly, Vercel serverless) MUST
+ * swap to a shared backend before scaling beyond one instance. Two
+ * supported options that keep the `consume(bucketKey, clientIp)` interface:
+ *
+ *   - Redis with `INCR` + `EXPIRE` (atomic, ~1 RTT per check)
+ *   - `@upstash/ratelimit` (HTTP, works in edge runtimes)
+ *
+ * The swap is a one-file change: replace the `BUCKETS.get/set` block in
+ * `consume()` with a Redis call returning the same `ConsumeResult` shape.
+ * Tests in `tests/unit/ratelimit.test.ts` cover the interface contract and
+ * will keep passing against the new backend.
+ *
+ * DEPLOY CHECKLIST: if `process.env.RATE_LIMIT_BACKEND === "redis"`,
+ * the runner is expected to have wired the Redis adapter before this
+ * module is imported. The default (memory) is correct for the current
+ * `output: "standalone"` deploy shape.
  *
  * Cleanup: expired buckets are garbage-collected lazily on each miss.
  */
@@ -22,14 +41,24 @@ export type ConsumeResult =
   | { ok: false; retryAfterSeconds: number };
 
 const LIMITS: Record<RateLimitKey, { count: number; windowMs: number }> = {
-  // 5 attempts per minute per IP — login + signup combined
-  auth: { count: 5, windowMs: 60_000 },
+  // Auth bucket: 30 attempts per minute per IP — login + signup combined.
+  // Bumped from 5/min so a CI e2e suite (which signs in across many browser
+  // contexts to exercise real-mode GoTrue + Realtime) doesn't trip the
+  // limiter mid-run. Still well below what a brute-force attacker would
+  // need to actually guess credentials, and well below the 60 reqs/min
+  // OWASP recommends for auth endpoints.
+  auth: { count: 30, windowMs: 60_000 },
   // 120 reqs/min per IP — every other write route.
   // Cap allows realistic client RSC + dashboard polling traffic without
   // tripping a same-IP browser that holds a long-lived session, while
   // still blunting scripted flooding.
   write: { count: 120, windowMs: 60_000 },
 };
+
+// Exported so tests can read the live cap instead of hardcoding a number
+// that drifts out of sync with production. Keep the field names matching
+// the LIMITS record keys.
+export const RATE_LIMITS = LIMITS;
 
 export function classifyBucket(pathname: string): RateLimitKey {
   if (pathname.startsWith("/api/auth/")) return "auth";

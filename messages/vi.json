@@ -1,0 +1,76 @@
+{
+  "dashboard": {
+    "welcome": {
+      "hello": "Xin chào,",
+      "subtitle": "Cùng xem tình hình công việc của team trong tuần này nhé!",
+      "motivational": "Chúc bạn một ngày làm việc hiệu quả! ✨"
+    },
+    "greeting": {
+      "hello": "Xin chào,",
+      "name": "Nguyễn Minh",
+      "today": "Hôm nay"
+    },
+    "kpi": {
+      "total": "Tổng công việc",
+      "completed": "Đã hoàn thành",
+      "inProgress": "Đang thực hiện",
+      "overdue": "Trễ hạn",
+      "blocked": "Bị chặn",
+      "vsLastMonth": "so với tuần trước",
+      "thisWeek": "tuần này",
+      "vsYesterday": "tổng công việc",
+      "needsAttention": "tổng công việc",
+      "next7Days": "tổng công việc"
+    },
+    "status": {
+      "title": "Tình trạng công việc",
+      "subtitle": "Phân bổ công việc theo trạng thái",
+      "total": "Công việc",
+      "backlog": "Tồn đọng",
+      "todo": "Cần làm",
+      "inProgress": "Đang làm",
+      "inReview": "Đang duyệt",
+      "done": "Hoàn thành"
+    },
+    "blockers": {
+      "title": "Điểm nghẽn công việc",
+      "subtitle": "Công việc cần xử lý để tiếp tục",
+      "empty": "Không có công việc nào bị chặn 🎉",
+      "viewAll": "Xem tất cả",
+      "blockedBy": "Bị chặn bởi",
+      "due": "Hạn"
+    },
+    "featured": {
+      "title": "Danh sách công việc nổi bật",
+      "subtitle": "Được giao cho bạn / sắp đến hạn",
+      "empty": "Không có công việc nào nổi bật.",
+      "assignee": "Phụ trách",
+      "project": "Dự án",
+      "viewAll": "Xem tất cả"
+    },
+    "filters": {
+      "all": "Tất cả",
+      "thisWeek": "Tuần này",
+      "allTeams": "Tất cả team",
+      "allProjects": "Tất cả dự án",
+      "overdue": "Quá hạn",
+      "search": "Tìm kiếm…"
+    }
+  },
+  "common": {
+    "loading": "Đang tải…",
+    "error": "Có lỗi xảy ra",
+    "retry": "Thử lại",
+    "viewMore": "Xem thêm",
+    "viewAll": "Xem tất cả",
+    "by": "bởi",
+    "days": "ngày",
+    "day": "ngày",
+    "hours": "giờ",
+    "hour": "giờ",
+    "ago": "trước",
+    "in": "trong",
+    "overdue": "Quá hạn",
+    "welcomeBack": "Chào mừng trở lại, {name}"
+  }
+}

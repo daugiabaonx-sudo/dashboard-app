@@ -54,14 +54,14 @@ if (!SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const USERS = [
-  { id: "00000000-0000-0000-0000-00000000000a", email: "minhanh@sunext.io",    full_name: "Minh Anh",    initials: "MA" },
-  { id: "00000000-0000-0000-0000-00000000000b", email: "quochuy@sunext.io",    full_name: "Quoc Huy",    initials: "QH" },
-  { id: "00000000-0000-0000-0000-00000000000c", email: "thanhlam@sunext.io",   full_name: "Thanh Lam",   initials: "TL" },
-  { id: "00000000-0000-0000-0000-00000000000d", email: "phuongthao@sunext.io", full_name: "Phuong Thao", initials: "PT" },
-  { id: "00000000-0000-0000-0000-00000000000e", email: "ductrung@sunext.io",   full_name: "Duc Trung",   initials: "DT" },
-  { id: "00000000-0000-0000-0000-00000000000f", email: "thanhha@sunext.io",    full_name: "Thanh Ha",    initials: "TH" },
-  { id: "00000000-0000-0000-0000-000000000010", email: "ngocmai@sunext.io",    full_name: "Ngoc Mai",    initials: "NM" },
-  { id: "00000000-0000-0000-0000-000000000011", email: "kimanh@sunext.io",     full_name: "Kim Anh",     initials: "KA" },
+  { id: "00000000-0000-0000-0000-00000000000a", email: "minhanh@sunext.io",   full_name: "Nguyen Minh Anh",  initials: "MA" },
+  { id: "00000000-0000-0000-0000-00000000000b", email: "quocbao@sunext.io",   full_name: "Tran Quoc Bao",    initials: "QB" },
+  { id: "00000000-0000-0000-0000-00000000000c", email: "phuong.le@sunext.io", full_name: "Le Hoang Phuong",  initials: "LP" },
+  { id: "00000000-0000-0000-0000-00000000000d", email: "thanhdat@sunext.io",  full_name: "Pham Thanh Dat",   initials: "TD" },
+  { id: "00000000-0000-0000-0000-00000000000e", email: "kimtuyen@sunext.io",  full_name: "Vu Kim Tuyen",     initials: "KT" },
+  { id: "00000000-0000-0000-0000-00000000000f", email: "bichngoc@sunext.io",  full_name: "Dao Bich Ngoc",    initials: "BN" },
+  { id: "00000000-0000-0000-0000-000000000010", email: "giakhanh@sunext.io",  full_name: "Hoang Gia Khanh",  initials: "GK" },
+  { id: "00000000-0000-0000-0000-000000000011", email: "mailinh@sunext.io",   full_name: "Bui Thi Mai Linh", initials: "ML" },
 ];
 
 const SEED_PASSWORD = "test-password-123";
@@ -95,44 +95,124 @@ async function waitForHealthy() {
 }
 
 async function provisionUser(user) {
-  const body = {
-    id: user.id,
-    email: user.email,
-    password: SEED_PASSWORD,
-    email_confirm: true,
-    user_metadata: {
-      full_name: user.full_name,
-      initials: user.initials,
-    },
+  // If the stub row already exists from seed-users.sql (id matches),
+  // delete it first so GoTrue can re-create with a real password hash.
+  // GoTrue's admin POST returns 422 on duplicate; we treat that as a
+  // signal to fall through to a DELETE+POST cycle.
+  const baseUrl = `${SUPABASE_URL}/auth/v1/admin/users`;
+  const headers = {
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    "Content-Type": "application/json",
   };
 
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  async function create() {
+    return fetch(baseUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        id: user.id,
+        email: user.email,
+        password: SEED_PASSWORD,
+        email_confirm: true,
+        // Cloud-supabase convention: every authenticated user has
+        // `role: "authenticated"` on auth.users. Without it, GoTrue's
+        // access_token JWT carries `"role": ""` and PostgREST returns
+        // `role "" does not exist` on the first SELECT — RLS-scoped
+        // tables return [] even for a workspace member.
+        role: "authenticated",
+        user_metadata: {
+          full_name: user.full_name,
+          initials: user.initials,
+        },
+      }),
+    });
+  }
+
+  async function deleteById() {
+    return fetch(`${baseUrl}/${user.id}`, {
+      method: "DELETE",
+      headers,
+    });
+  }
+
+  async function ensureRole(userId) {
+    // Re-PUT the role for users created before the `role` field was
+    // added to the admin POST body (so this script is idempotent on
+    // existing stacks whose auth.users.role is still empty).
+    const res = await fetch(`${baseUrl}/${userId}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ role: "authenticated" }),
+    });
+    if (!res.ok) {
+      const detail = await safeText(res);
+      console.error(
+        `[seed-auth] failed to set role=authenticated for ${userId}: HTTP ${res.status} — ${detail}`
+      );
+      process.exit(1);
+    }
+  }
+
+  let res = await create();
+  if (res.status === 422) {
+    // Stub row from seed-users.sql exists; delete and retry once.
+    const del = await deleteById();
+    if (!del.ok && del.status !== 404) {
+      const detail = await safeText(del);
+      console.error(
+        `[seed-auth] failed to delete pre-existing stub for ${user.email}: HTTP ${del.status} — ${detail}`
+      );
+      process.exit(1);
+    }
+    res = await create();
+  }
 
   if (SUCCESS_STATUSES.has(res.status)) {
+    await ensureRole(user.id);
     console.log(`[seed-auth] user ${user.email} created or already exists`);
     return;
   }
 
-  let detail = "";
-  try {
-    detail = await res.text();
-  } catch {
-    detail = "<unreadable response body>";
-  }
+  const detail = await safeText(res);
   console.error(
     `[seed-auth] failed to provision ${user.email}: HTTP ${res.status} — ${detail}`
   );
   process.exit(1);
 }
 
+async function safeText(res) {
+  try {
+    return await res.text();
+  } catch {
+    return "<unreadable response body>";
+  }
+}
+
 async function fetchAnonKey() {
+  // ANON_KEY is generated deterministically by scripts/gen-keys.js and
+  // lives next to SERVICE_ROLE_KEY in .env.compose. Reading it directly
+  // avoids relying on GoTrue's /auth/v1/settings endpoint, which does
+  // not always expose anon_key (v2.177.0 omits it). Falling back to
+  // SERVICE_ROLE_KEY would be a security regression — the anon key
+  // must be the role:anon JWT, never the role:service_role one.
+  const composePath = join(ROOT, ".env.compose");
+  if (existsSync(composePath)) {
+    const text = readFileSync(composePath, "utf8");
+    for (const rawLine of text.split("\n")) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#")) continue;
+      const eq = line.indexOf("=");
+      if (eq < 0) continue;
+      const key = line.slice(0, eq).trim();
+      if (key === "ANON_KEY") {
+        const value = line.slice(eq + 1).trim();
+        if (value.length > 0) return value;
+      }
+    }
+  }
+  // Last-resort fallback: ask GoTrue's settings endpoint. If that also
+  // fails, propagate the service-role key with a warning rather than
+  // silently swapping roles — operators must see that the fallback fired.
   try {
     const res = await fetch(`${SUPABASE_URL}/auth/v1/settings`, {
       headers: {
@@ -140,6 +220,11 @@ async function fetchAnonKey() {
       },
     });
     if (!res.ok) {
+      console.warn(
+        "[seed-auth] .env.compose has no ANON_KEY and /auth/v1/settings returned " +
+          `${res.status}; falling back to SERVICE_ROLE_KEY (RDS-bypassing) — ` +
+          "this will break RLS. Re-run `npm run db:reset` to regenerate ANON_KEY."
+      );
       return SUPABASE_SERVICE_ROLE_KEY;
     }
     const json = await res.json();
@@ -149,12 +234,16 @@ async function fetchAnonKey() {
       settings.api_key ||
       settings.public_key ||
       settings.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    return typeof candidate === "string" && candidate.length > 0
-      ? candidate
-      : SUPABASE_SERVICE_ROLE_KEY;
+    if (typeof candidate === "string" && candidate.length > 0) {
+      return candidate;
+    }
   } catch {
-    return SUPABASE_SERVICE_ROLE_KEY;
+    // fallthrough
   }
+  console.warn(
+    "[seed-auth] could not locate ANON_KEY; falling back to SERVICE_ROLE_KEY"
+  );
+  return SUPABASE_SERVICE_ROLE_KEY;
 }
 
 async function main() {

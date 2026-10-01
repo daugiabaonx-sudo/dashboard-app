@@ -1,0 +1,63 @@
+# Caddy reverse proxy for the local Supabase stack.
+#
+# Single Cloud-Supabase-compatible URL on :54321:
+#   /auth/v1/* → gotrue:9999   (GoTrue root — strip /auth/v1 prefix)
+#   /realtime/* → realtime:4000 (Realtime v3 WS + REST /api/*)
+#   /meta/*     → meta:8080     (Postgres introspection)
+#   /*          → rest:3001     (PostgREST, default)
+#
+# Caddy 2.10+ handles the WebSocket upgrade automatically for /realtime/*
+# when the upstream (Realtime v3) supports it.
+
+:54321 {
+    encode zstd gzip
+
+    # Realtime — WebSocket upgrade must come before the default catch-all so
+    # the WS handshake isn't held by the PostgREST proxy. supabase-js builds
+    # its WS endpoint from `${NEXT_PUBLIC_SUPABASE_URL}/realtime/v1`, then
+    # Phoenix appends `/websocket`. So the browser hits
+    #   ws://gateway:54321/realtime/v1/websocket
+    # Realtime v3 mounts its Phoenix Socket at `/socket`, so the upstream
+    # path must be `/socket/websocket`. handle_path strips the leading
+    # prefix and we rewrite the leftover `/websocket` to `/socket/websocket`.
+    @realtime {
+        path /realtime/v1/websocket
+    }
+    handle @realtime {
+        rewrite * /socket/websocket
+        reverse_proxy realtime:4000
+    }
+
+    # REST-style realtime endpoints (broadcast, presence). supabase-js
+    # builds these as `${SUPABASE_URL}/realtime/v1/api/broadcast` etc.
+    # Caddy strips /realtime/v1, upstream is mounted at /api/*.
+    handle_path /realtime/v1/* {
+        reverse_proxy realtime:4000
+    }
+
+    # GoTrue — Cloud Supabase exposes /auth/v1/*. GoTrue's own router
+    # serves /health, /signup, /token, /admin/users, etc. at root, so we
+    # strip the /auth/v1 prefix before forwarding.
+    handle_path /auth/v1/* {
+        reverse_proxy gotrue:9999
+    }
+
+    # Postgres introspection API — meta serves /health at root.
+    handle_path /meta/* {
+        reverse_proxy meta:8080
+    }
+
+    # PostgREST — mounted at /rest/v1/* to match Cloud Supabase's URL
+    # layout. PostgREST itself serves tables at root (e.g. `/tasks`), so
+    # we strip the /rest/v1 prefix before forwarding. supabase-js
+    # constructs URLs like `${SUPABASE_URL}/rest/v1/tasks` and expects
+    # 200s, not 404s.
+    handle_path /rest/v1/* {
+        reverse_proxy rest:3001
+    }
+
+    # Default — PostgREST, mounted at root for bare-host deployments
+    # (Cloud uses /rest/v1/*, but a direct http://rest:3001 call should
+    # also work for ops sanity-checks).
+    reverse_proxy rest:3001
+}

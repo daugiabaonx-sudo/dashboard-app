@@ -31,6 +31,7 @@ create trigger projects_touch before update on public.projects
 
 alter table public.projects enable row level security;
 
+drop policy if exists "projects_member_all" on public.projects;
 create policy "projects_member_all"
   on public.projects for all
   using (public.is_workspace_member(workspace_id))

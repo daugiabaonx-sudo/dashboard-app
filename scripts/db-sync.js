@@ -33,9 +33,16 @@ for (const f of files) {
   copyFileSync(join(MIGRATIONS_DIR, f), join(TARGET_DIR, f));
   console.log(`  + migrations/${f}`);
 }
+
+const SEED_USERS_FILE = join(ROOT, "supabase", "seed-users.sql");
+if (existsSync(SEED_USERS_FILE)) {
+  copyFileSync(SEED_USERS_FILE, join(TARGET_DIR, "seed-users.sql"));
+  console.log("  + seed-users.sql");
+}
+
 copyFileSync(SEED_FILE, join(TARGET_DIR, "seed.sql"));
 console.log("  + seed.sql");
 copyFileSync(join(ROOT, ".env.compose"), join(TARGET_DIR, ".env.compose"));
 console.log("  + .env.compose");
 
-console.log(`Synced ${files.length} migrations + seed.sql → ${TARGET_DIR}`);
+console.log(`Synced ${files.length} migrations + seed-users.sql + seed.sql → ${TARGET_DIR}`);

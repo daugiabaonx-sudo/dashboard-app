@@ -17,6 +17,7 @@ create index if not exists notifications_user_idx
 
 alter table public.notifications enable row level security;
 
+drop policy if exists "notifications_self_all" on public.notifications;
 create policy "notifications_self_all"
   on public.notifications for all
   using (user_id = auth.uid())

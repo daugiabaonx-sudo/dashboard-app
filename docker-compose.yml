@@ -1,37 +1,95 @@
-# Local Postgres + PostgREST for Phase F dev.
-# Brings up the database and the REST query layer so the existing
-# 0001-0009 + 0010 migrations can be exercised end-to-end (RPCs,
-# RLS, public.workspace_kpis, public.workspace_workload).
+# Local Postgres + GoTrue + Realtime v3 + Meta + PostgREST for Phase F dev.
+# Brings up the database, REST query layer, auth (GoTrue), realtime
+# (postgres_changes via wal2json), and Postgres introspection (meta) so the
+# existing 0001-0013 migrations can be exercised end-to-end (RPCs, RLS,
+# publication supabase_realtime, public.workspace_kpis, public.workspace_workload).
 #
-# Auth, Realtime, Storage, and Meta are intentionally NOT included
-# here — they need additional env-var config per service version
-# (DATABASE_URL/API_EXTERNAL_URL/METRICS_JWT_SECRET/SECRET_KEY_BASE
-# /APP_NAME/etc.) and drift on every image bump. Use Supabase Cloud
-# for those concerns, or run the in-memory mock with MOCK_SUPABASE=1.
+# A Caddy gateway (port 54321) fronts all four services with the Cloud
+# Supabase path layout so the Next.js app talks to a single URL:
+#   /auth/*     → gotrue:9999
+#   /realtime/* → realtime:4000  (WS upgrade for postgres_changes)
+#   /meta/*     → meta:8080
+#   /*          → rest:3001      (PostgREST, default)
+#
+# Storage is intentionally NOT included — see docs/PHASE_F_PROGRESS.md.
+# Image versions are pinned by tag (no :latest).
 #
 # Use `npm run db:up` to start, `npm run db:down` to stop,
-# `npm run db:reset` to wipe + reseed.
+# `npm run db:reset` to wipe + reseed, `npm run db:stack` for the full
+# dev loop (reset + seed + seed-auth).
 
 name: sunext-supabase
 
 services:
   db:
-    image: postgres:16-alpine
+    # supabase/postgres bundles wal2json, pre-creates the auth schema
+    # (auth.users, auth.identities, factor_type, _realtime, etc.), and
+    # sets up the standard Cloud roles (anon, authenticated, service_role,
+    # authenticator, supabase_auth_admin). The upstream postgres:16-alpine
+    # image does not ship any of this; GoTrue's bundled migrations assume
+    # the Cloud image's bootstrap.
+    #
+    # Why not the upstream `postgres:16-alpine`?
+    #   - GoTrue's 00_init_auth_schema.up.sql assumes the `auth` schema
+    #     exists. Upstream alpine doesn't create it.
+    #   - GoTrue's 20221003041349_add_mfa_schema.up.sql creates `factor_type`
+    #     inside a `do $$ ... end $$;` block with NO schema qualification.
+    #     On bare alpine with search_path='$user, public' the type lands in
+    #     `public`, breaking 20240729123726_add_mfa_phone_config.up.sql
+    #     which does `alter type auth.factor_type add value 'phone'`.
+    #     Cloud's image sets search_path='auth' for supabase_auth_admin,
+    #     which GoTrue connects as, so the type lands correctly.
+    #   - 20231117164230_add_id_pkey_identities.up.sql renames
+    #     identities.id to provider_id and adds a new uuid `id` column.
+    #     The earlier 20221208132122_backfill_email_last_sign_in_at.up.sql
+    #     assumes `id` is still text — runs in correct timestamp order
+    #     only if GoTrue starts from a clean schema. Cloud's pre-built
+    #     `auth.users` + Cloud's subsequent GoTrue migration chain is
+    #     what the Cloud stack ships; reproducing it on bare alpine
+    #     would require re-implementing Cloud's init scripts.
+    #
+    # wal_level=logical is already set in /etc/postgresql/postgresql.conf.
+    # Realtime v3 uses pgoutput logical decoding (built into Postgres core),
+    # NOT wal2json — no shared_preload_libraries change needed.
+    #
+    # Cloud's image is built around POSTGRES_USER=supabase_admin as the
+    # initdb user. The bundled /docker-entrypoint-initdb.d/migrate.sh runs
+    # init-scripts/*.sql as the bootstrap user (supabase_admin), then
+    # creates the `postgres` role + re-applies init-scripts as that user,
+    # then runs migrations/*.sql as supabase_admin. Using POSTGRES_USER=postgres
+    # breaks the bootstrap because migrate.sh's first ALTER USER fails
+    # (Role "supabase_admin" does not exist).
+    image: supabase/postgres:15.6.1.142
     container_name: sunext-db
     restart: unless-stopped
     ports:
       - "54322:5432"
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: supabase_admin
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
+    env_file:
+      - .env.compose
     volumes:
       - sunext-db-data:/var/lib/postgresql/data
-      # postgres:16-alpine's entrypoint only processes FILES in this dir,
-      # not subdirectories. We flatten migrations + seed into /tmp/sunext-initdb.
-      - /tmp/sunext-initdb:/docker-entrypoint-initdb.d:ro
+      # Cloud's image has its own /docker-entrypoint-initdb.d (Cloud's
+      # init-scripts/, migrate.sh, migrations/). We mount our migrations
+      # into a separate path and let our entrypoint wrapper run them
+      # AFTER Cloud's init completes (db-sync.js writes them to
+      # /tmp/sunext-initdb, the wrapper psql -f's each in order).
+      - /tmp/sunext-initdb:/tmp/sunext-initdb:ro
+      # Wrapper entrypoint: runs Cloud's original entrypoint.sh first
+      # (which runs Cloud's init scripts), then applies our 13 migrations
+      # + seed.sql on top.
+      - ./scripts/docker-entrypoint-wrapper.sh:/usr/local/bin/docker-entrypoint-wrapper.sh:ro
+    entrypoint: ["/usr/local/bin/docker-entrypoint-wrapper.sh"]
+    # wal_level=logical is required for the postgres_cdc_rls extension
+    # (Realtime v3 reads logical-decoded WAL via pgoutput). The Cloud
+    # image's bundled postgresql.conf doesn't set this by default — we
+    # override at the postgres command-line.
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=10", "-c", "max_wal_senders=10"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U supabase_admin -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -45,14 +103,186 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env.compose
     environment:
-      PGRST_DB_URI: postgres://postgres:postgres@db:5432/postgres
+      PGRST_DB_URI: postgres://authenticator:postgres@db:5432/postgres
       PGRST_DB_SCHEMA: public
       PGRST_DB_ANON_ROLE: anon
+      # PostgREST needs the JWT secret to verify user tokens (so RLS
+      # policies keyed on auth.uid() can resolve). Without it the
+      # server returns "Server lacks JWT secret" on every authenticated
+      # request and `select` from public.* returns an empty object
+      # even when rows exist.
       PGRST_JWT_SECRET: dev-only-do-not-use-in-prod-0001-0000-0000-0000-000000000abc
       PGRST_SERVER_PORT: 3001
+    # No host port — reachable only via the gateway.
+    expose:
+      - "3001"
+    networks:
+      - sunext-net
+
+  gotrue:
+    image: supabase/gotrue:v2.177.0
+    container_name: sunext-gotrue
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env.compose
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: "9999"
+      GOTRUE_DB_DRIVER: postgres
+      # Connect as supabase_auth_admin (not postgres). Cloud's init sets
+      # search_path = "auth" for this role, so unqualified `create type
+      # factor_type` inside GoTrue's 20221003041349_add_mfa_schema.up.sql
+      # lands in auth instead of public — which 20240729123726 then expects.
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:postgres@db:5432/postgres
+      GOTRUE_JWT_SECRET: dev-only-do-not-use-in-prod-0001-0000-0000-0000-000000000abc
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_SITE_URL: http://127.0.0.1:54321
+      GOTRUE_URI_ALLOW_LIST: http://127.0.0.1:54321,http://127.0.0.1:3000
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: "false"
+      GOTRUE_EXTERNAL_GITHUB_ENABLED: "false"
+      GOTRUE_SMTP_HOST: ""
+      GOTRUE_SMTP_PORT: "1025"
+      GOTRUE_SMTP_USER: ""
+      GOTRUE_SMTP_PASS: ""
+      GOTRUE_SMTP_ADMIN_EMAIL: ""
+      GOTRUE_SMTP_SENDER_NAME: ""
+      GOTRUE_LOG_LEVEL: info
+    expose:
+      - "9999"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:9999/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sunext-net
+
+  realtime:
+    image: supabase/realtime:v2.30.34
+    container_name: sunext-realtime
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env.compose
+    environment:
+      PORT: "4000"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: "false"
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime, public'
+      # SECURE_CHANNELS=true: JWT validation on the WS — required for
+      # RLS-filtered postgres_changes to honor workspace_id.
+      SECURE_CHANNELS: "true"
+      JWT_SECRET: dev-only-do-not-use-in-prod-0001-0000-0000-0000-000000000abc
+      # DB_ENC_KEY: 16-byte AES-128-ECB key Realtime uses to decrypt the
+      # jwt_secret stored in public.tenants.jwt_secret. Cloud uses the
+      # literal "supabaserealtime". The matching plaintext jwt_secret in
+      # the DB must be AES-128-ECB-encrypted with this key, then base64
+      # encoded. See scripts/encrypt-tenant-secret.js.
+      DB_ENC_KEY: supabaserealtime
+      # API_JWT_SECRET: jwt_secret Realtime writes into the auto-seeded
+      # "realtime-dev" tenant in public.tenants. Must match the JWT_SECRET
+      # shared by GoTrue + PostgREST so user JWTs (signed with JWT_SECRET)
+      # are accepted by Realtime's tenant validation. Without this, every
+      # WS handshake fails with TenantNotFound.
+      API_JWT_SECRET: dev-only-do-not-use-in-prod-0001-0000-0000-0000-000000000abc
+      # API_JWT_JWKS: omitted (NOT empty string) — the seed file's
+      # `Jason.decode!` raises on empty input. We use HS256 with
+      # API_JWT_SECRET, not RS256 with JWKS.
+      # SEED_SELF_HOST=false: we provision the tenant manually via SQL
+      # with external_id="127" (Realtime's hardcoded default), since
+      # the seed inserts "realtime-dev" which Realtime doesn't query
+      # for. See scripts/seed-tenant.sql.
+      SEED_SELF_HOST: "false"
+      # Realtime v3 reads logical-decoded WAL changes; nothing else to set.
+      API_EXTERNAL_URL: http://gateway:54321
+      SITE_URL: http://127.0.0.1:54321
+      # realtime's /app/run.sh uses `set -u` and references $RLIMIT_NOFILE
+      # unconditionally; supply an explicit value to keep the script from
+      # exiting with "unbound variable" before the erlang release boots.
+      RLIMIT_NOFILE: "65536"
+      # runtime.exs raises "APP_NAME not available" if empty and
+      # System.fetch_env!("SECRET_KEY_BASE") if missing. Both are
+      # required for the prod release to boot.
+      APP_NAME: sunext-realtime
+      SECRET_KEY_BASE: dev-only-do-not-use-in-prod-0001-0000-0000-000000000abc
+    expose:
+      - "4000"
+    healthcheck:
+      # Realtime's /api/ping requires a JWT (returns 401 without one).
+      # Use TCP connect (curl --fail on the listener with -o /dev/null
+      # succeeds once the HTTP server is up — accept any HTTP response).
+      test: ["CMD-SHELL", "curl --silent --max-time 3 --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4000/api/ping | grep -E '^[1-5][0-9][0-9]$' >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sunext-net
+
+  meta:
+    image: supabase/postgres-meta:v0.87.1
+    container_name: sunext-meta
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env.compose
+    environment:
+      # PG_META_HOST is the HTTP bind address (not the DB host). Bound to
+      # 0.0.0.0 so the Caddy gateway can reach it. DB connection vars are
+      # PG_META_DB_HOST / _PORT / _NAME / _USER / _PASSWORD below.
+      PG_META_HOST: 0.0.0.0
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: "5432"
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: postgres
+      PG_META_DB_PASSWORD: postgres
+      PG_META_JWT_SECRET: dev-only-do-not-use-in-prod-0001-0000-0000-0000-000000000abc
+      PG_META_API_PORT: "8080"
+    expose:
+      - "8080"
+    healthcheck:
+      # The image has no wget/curl/nc — use node http.request to probe.
+      test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://127.0.0.1:8080/health\",r=>process.exit(r.statusCode===200?0:1)).on(\"error\",()=>process.exit(1))' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sunext-net
+
+  gateway:
+    image: caddy:2.10-alpine
+    container_name: sunext-gateway
+    restart: unless-stopped
+    depends_on:
+      gotrue:
+        condition: service_healthy
+      realtime:
+        condition: service_healthy
+      meta:
+        condition: service_healthy
+      rest:
+        condition: service_started
     ports:
-      - "3001:3001"
+      # Single Cloud-Supabase-compatible URL on 54321.
+      - "54321:54321"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
     networks:
       - sunext-net
 

@@ -1,0 +1,76 @@
+{
+  "dashboard": {
+    "welcome": {
+      "hello": "Hello,",
+      "subtitle": "Let's take a look at this week's team progress!",
+      "motivational": "Wishing you a productive day! ✨"
+    },
+    "greeting": {
+      "hello": "Hello,",
+      "name": "Minh Anh",
+      "today": "Today"
+    },
+    "kpi": {
+      "total": "Total tasks",
+      "completed": "Completed",
+      "inProgress": "In progress",
+      "overdue": "Overdue",
+      "blocked": "Blocked",
+      "vsLastMonth": "vs last week",
+      "thisWeek": "this week",
+      "vsYesterday": "of total",
+      "needsAttention": "of total",
+      "next7Days": "of total"
+    },
+    "status": {
+      "title": "Task status",
+      "subtitle": "Tasks distribution by status",
+      "total": "Tasks",
+      "backlog": "Backlog",
+      "todo": "To do",
+      "inProgress": "In progress",
+      "inReview": "In review",
+      "done": "Done"
+    },
+    "blockers": {
+      "title": "Workflow blockers",
+      "subtitle": "Tasks waiting to move forward",
+      "empty": "No blocked tasks 🎉",
+      "viewAll": "View all",
+      "blockedBy": "Blocked by",
+      "due": "Due"
+    },
+    "featured": {
+      "title": "Featured tasks",
+      "subtitle": "Assigned to you / due soon",
+      "empty": "Nothing featured right now.",
+      "assignee": "Assignee",
+      "project": "Project",
+      "viewAll": "View all"
+    },
+    "filters": {
+      "all": "All",
+      "thisWeek": "This week",
+      "allTeams": "All teams",
+      "allProjects": "All projects",
+      "overdue": "Overdue",
+      "search": "Search…"
+    }
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "viewMore": "View more",
+    "viewAll": "View all",
+    "by": "by",
+    "days": "days",
+    "day": "day",
+    "hours": "hours",
+    "hour": "hour",
+    "ago": "ago",
+    "in": "in",
+    "overdue": "Overdue",
+    "welcomeBack": "Welcome back, {name}"
+  }
+}

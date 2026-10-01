@@ -109,9 +109,11 @@ alter table public.profiles enable row level security;
 
 -- Profiles are visible to anyone in the same workspace; RLS on memberships
 -- ensures only authorized callers see them.
+drop policy if exists "profiles_select_all" on public.profiles;
 create policy "profiles_select_all"
   on public.profiles for select using (true);
 
+drop policy if exists "profiles_update_self" on public.profiles;
 create policy "profiles_update_self"
   on public.profiles for update
   using (id = auth.uid())

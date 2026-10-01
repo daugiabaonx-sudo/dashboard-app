@@ -43,6 +43,13 @@ as $$
   );
 $$;
 
+drop policy if exists "workspaces_select_member"        on public.workspaces;
+drop policy if exists "workspaces_update_owner"         on public.workspaces;
+drop policy if exists "workspaces_insert_authenticated" on public.workspaces;
+drop policy if exists "wm_select_self_or_member"        on public.workspace_members;
+drop policy if exists "wm_insert_owner"                 on public.workspace_members;
+drop policy if exists "wm_update_owner"                 on public.workspace_members;
+
 create policy "workspaces_select_member"
   on public.workspaces for select
   using (public.is_workspace_member(id));

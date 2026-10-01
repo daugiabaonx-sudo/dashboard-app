@@ -3,6 +3,7 @@ import {
   _gc,
   classifyBucket,
   consume,
+  RATE_LIMITS,
   resolveClientIp,
 } from "@/lib/ratelimit";
 
@@ -33,7 +34,11 @@ describe("ratelimit helpers", () => {
     });
 
     it("blocks after the per-window cap is reached", () => {
-      const limit = 5;
+      // Read the cap from the module so the test stays in sync if prod
+      // raises/lowers the limit. Hardcoding the count (e.g. `const limit
+      // = 5`) caused the test to silently pass against stale production
+      // values and to miss a recent 5→30 bump.
+      const limit = RATE_LIMITS.auth.count;
       for (let i = 0; i < limit; i++) {
         const r = consume("auth", "9.9.9.9");
         expect(r.ok).toBe(true);
