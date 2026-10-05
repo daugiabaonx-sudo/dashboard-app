@@ -20,12 +20,20 @@
       "thisWeek": "tuần này",
       "vsYesterday": "tổng công việc",
       "needsAttention": "tổng công việc",
-      "next7Days": "tổng công việc"
+      "next7Days": "tổng công việc",
+      "ariaLabel": "Chỉ số tổng quan"
     },
     "status": {
       "title": "Tình trạng công việc",
       "subtitle": "Phân bổ công việc theo trạng thái",
       "total": "Công việc",
+      "backlog": "Tồn đọng",
+      "todo": "Cần làm",
+      "inProgress": "Đang làm",
+      "inReview": "Đang duyệt",
+      "done": "Hoàn thành"
+    },
+    "tableStatus": {
       "backlog": "Tồn đọng",
       "todo": "Cần làm",
       "inProgress": "Đang làm",
@@ -38,6 +46,7 @@
       "empty": "Không có công việc nào bị chặn 🎉",
       "viewAll": "Xem tất cả",
       "blockedBy": "Bị chặn bởi",
+      "severity": "Mức độ",
       "due": "Hạn"
     },
     "featured": {
@@ -57,6 +66,178 @@
       "search": "Tìm kiếm…"
     }
   },
+  "topBar": {
+    "searchPlaceholder": "Tìm công việc, nhân viên, dự án…",
+    "filters": "Bộ lọc",
+    "newTask": "Tạo công việc",
+    "language": "Ngôn ngữ",
+    "languageEn": "Tiếng Anh",
+    "languageVi": "Tiếng Việt",
+    "theme": "Chế độ hiển thị",
+    "themeLight": "Sáng",
+    "themeDark": "Tối",
+    "toggleTheme": "Chuyển giao diện"
+  },
+  "sidebar": {
+    "overview": "Tổng quan",
+    "tasks": "Công việc",
+    "projects": "Dự án",
+    "employees": "Nhân viên",
+    "reports": "Báo cáo",
+    "calendar": "Lịch",
+    "notifications": "Thông báo",
+    "settings": "Cài đặt",
+    "statusOk": "Hệ thống hoạt động bình thường",
+    "statusHint": "Đồng bộ realtime · sự cố gần nhất 14 ngày trước"
+  },
+  "status": {
+    "inProgress": "Đang làm",
+    "done": "Hoàn thành",
+    "overdue": "Trễ hạn",
+    "blocked": "Bị chặn",
+    "notStarted": "Chưa bắt đầu",
+    "todo": "Cần làm",
+    "review": "Đang duyệt"
+  },
+  "priority": {
+    "high": "Cao",
+    "medium": "Trung bình",
+    "low": "Thấp",
+    "urgent": "Khẩn cấp",
+    "labelPattern": "Mức độ ưu tiên: {value}",
+    "severityPattern": "Mức độ: {value}"
+  },
+  "kpiLabels": {
+    "total": "Tổng công việc",
+    "completed": "Đã hoàn thành",
+    "inProgress": "Đang thực hiện",
+    "overdue": "Trễ hạn",
+    "blocked": "Bị chặn",
+    "vsLastWeek": "so với tuần trước",
+    "thisWeek": "tuần này",
+    "ofTotal": "trên tổng số"
+  },
+  "profile": {
+    "admin": "Quản trị viên",
+    "member": "Thành viên"
+  },
+  "table": {
+    "employee": "Nhân viên",
+    "project": "Dự án",
+    "task": "Công việc",
+    "priority": "Độ ưu tiên",
+    "progress": "Tiến độ",
+    "deadline": "Hạn chót",
+    "status": "Trạng thái",
+    "issue": "Vấn đề",
+    "taskProject": "Công việc / Dự án",
+    "assignee": "Phụ trách",
+    "time": "Thời gian",
+    "severity": "Mức độ",
+    "days": "ngày",
+    "viewAll": "Xem tất cả",
+    "owner": "Phụ trách",
+    "risk": "Rủi ro",
+    "title": "Tiêu đề",
+    "actions": "Hành động",
+    "rowsPerPage": "Số dòng / trang",
+    "page": "Trang",
+    "of": "trên",
+    "showing": "Hiển thị",
+    "noResults": "Không tìm thấy kết quả nào.",
+    "columns": "Cột",
+    "showAll": "Hiện tất cả",
+    "hideAll": "Ẩn tất cả",
+    "search": "Tìm công việc…",
+    "openTask": "Mở task {title}"
+  },
+  "view": {
+    "tasks": {
+      "title": "Tất cả công việc",
+      "subtitle": "Quản lý, sắp xếp và lọc toàn bộ công việc trong workspace.",
+      "empty": "Không có công việc nào.",
+      "coming": "Trang này sắp ra mắt — đang được phát triển."
+    },
+    "projects": {
+      "title": "Dự án",
+      "subtitle": "Theo dõi tiến độ và tình trạng các dự án.",
+      "coming": "Danh sách dự án sẽ hiển thị tại đây."
+    },
+    "employees": {
+      "title": "Nhân viên",
+      "subtitle": "Quản lý thành viên và phân bổ workload.",
+      "coming": "Danh sách nhân viên sẽ hiển thị tại đây."
+    },
+    "reports": {
+      "title": "Báo cáo",
+      "subtitle": "Thống kê, xu hướng và phân tích hiệu suất.",
+      "coming": "Báo cáo sẽ hiển thị tại đây."
+    },
+    "calendar": {
+      "title": "Lịch",
+      "subtitle": "Lịch họp, deadline và sự kiện team.",
+      "coming": "Lịch sẽ hiển thị tại đây."
+    },
+    "notifications": {
+      "title": "Thông báo",
+      "subtitle": "Tất cả hoạt động gần đây trong workspace.",
+      "coming": "Thông báo sẽ hiển thị tại đây."
+    },
+    "settings": {
+      "title": "Cài đặt",
+      "subtitle": "Tùy chỉnh dashboard theo sở thích của bạn.",
+      "coming": "Tùy chọn cài đặt sẽ hiển thị tại đây."
+    }
+  },
+  "greeting": {
+    "typewriter": {
+      "prefix": "Xin chào",
+      "words": ["bạn", "Minh", "team SUNEXT", "mọi người"],
+      "cursor": ""
+    },
+    "morph": {
+      "lines": [
+        "Cùng xem tình hình công việc của team trong tuần này nhé!",
+        "Một ngày tuyệt vời để hoàn thành mọi thứ!",
+        "Hôm nay nay 19 deadline đang đến gần."
+      ]
+    }
+  },
+  "healthMark": {
+    "title": "Tình trạng dự án",
+    "subtitle": "Tiến độ và sức khỏe tổng quan của các dự án",
+    "onTrack": "Đúng tiến độ",
+    "atRisk": "Có rủi ro",
+    "blocked": "Bị chặn",
+    "tasks": "công việc",
+    "done": "hoàn thành"
+  },
+  "workload": {
+    "title": "Workload team",
+    "subtitle": "Phân bổ công việc theo thành viên",
+    "activeTasks": "công việc",
+    "utilization": "Sử dụng"
+  },
+  "notificationsPanel": {
+    "title": "Thông báo",
+    "empty": "Không có thông báo mới.",
+    "markAllRead": "Đánh dấu đã đọc"
+  },
+  "modal": {
+    "task": {
+      "title": "Chi tiết công việc",
+      "status": "Trạng thái",
+      "progress": "Tiến độ",
+      "priority": "Độ ưu tiên",
+      "notes": "Ghi chú",
+      "save": "Lưu thay đổi",
+      "cancel": "Hủy",
+      "saved": "Đã cập nhật công việc",
+      "savedHint": "Thay đổi được lưu cục bộ — sẽ đồng bộ khi realtime kết nối.",
+      "blockerTitle": "Điểm nghẽn",
+      "noBlocker": "Không có điểm nghẽn"
+    }
+  },
   "common": {
     "loading": "Đang tải…",
     "error": "Có lỗi xảy ra",
@@ -71,6 +252,10 @@
     "ago": "trước",
     "in": "trong",
     "overdue": "Quá hạn",
+    "today": "Hôm nay",
+    "daysOverduePattern": "Trễ {n} ngày",
+    "daysLeftPattern": "Còn {n} ngày",
+    "daysStuckPattern": "{n} ngày",
     "welcomeBack": "Chào mừng trở lại, {name}"
   }
 }

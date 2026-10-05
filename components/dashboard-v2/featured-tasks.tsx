@@ -2,10 +2,12 @@
 // Priority / Progress / Deadline / Status.
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PriorityBadge } from "@/components/dashboard-v2/priority-badge";
 import type { DashboardFeaturedRow } from "@/lib/dashboard-data";
 import { cn } from "@/lib/cn";
+import { formatDays } from "@/lib/format";
 
 interface FeaturedTasksLabels {
   title: string;
@@ -18,25 +20,41 @@ interface FeaturedTasksLabels {
   progress: string;
   deadline: string;
   empty: string;
+  priorityHigh: string;
+  priorityMedium: string;
+  priorityLow: string;
+  today: string;
+  daysOverduePattern: string;
+  daysLeftPattern: string;
 }
 
 interface FeaturedTasksProps {
   rows: DashboardFeaturedRow[];
   labels: FeaturedTasksLabels;
+  titleSlot?: ReactNode;
 }
 
 function daysFromNow(iso: string): number {
   return Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
 }
 
-export function FeaturedTasks({ rows, labels }: FeaturedTasksProps) {
+function priorityLabel(
+  p: "high" | "medium" | "low",
+  labels: Pick<FeaturedTasksLabels, "priorityHigh" | "priorityMedium" | "priorityLow">,
+): string {
+  if (p === "high") return labels.priorityHigh;
+  if (p === "medium") return labels.priorityMedium;
+  return labels.priorityLow;
+}
+
+export function FeaturedTasks({ rows, labels, titleSlot }: FeaturedTasksProps) {
   return (
     <Card className="animate-fade-up opacity-0" style={{ animationDelay: "120ms" }}>
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="font-display text-xl font-normal tracking-tight">
-              {labels.title}
+              {titleSlot ?? labels.title}
             </CardTitle>
             <CardDescription className="mt-1">{labels.subtitle}</CardDescription>
           </div>
@@ -93,7 +111,7 @@ export function FeaturedTasks({ rows, labels }: FeaturedTasksProps) {
                       </td>
                       <td className="py-3 pr-3">
                         <Link
-                          href={`/tasks/${row.id}`}
+                          href={`/tasks?focus=${row.id}`}
                           prefetch={false}
                           className="font-medium tracking-tight hover:text-primary"
                         >
@@ -103,7 +121,7 @@ export function FeaturedTasks({ rows, labels }: FeaturedTasksProps) {
                       <td className="py-3 pr-3">
                         <PriorityBadge
                           priority={row.priority}
-                          label={row.priority.charAt(0).toUpperCase() + row.priority.slice(1)}
+                          label={priorityLabel(row.priority, labels)}
                         />
                       </td>
                       <td className="py-3 pr-3">
@@ -120,11 +138,7 @@ export function FeaturedTasks({ rows, labels }: FeaturedTasksProps) {
                         </div>
                       </td>
                       <td className={cn("py-3 pr-3 font-mono text-[11px] tabular-nums", dueTone)}>
-                        {days < 0
-                          ? `${Math.abs(days)}d overdue`
-                          : days === 0
-                            ? "Today"
-                            : `${days}d left`}
+                        {formatDays(days, labels)}
                       </td>
                     </tr>
                   );
@@ -157,7 +171,7 @@ export function FeaturedTasks({ rows, labels }: FeaturedTasksProps) {
                     </span>
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <Link
-                        href={`/tasks/${row.id}`}
+                        href={`/tasks?focus=${row.id}`}
                         prefetch={false}
                         className="block text-[13.5px] font-medium leading-snug tracking-tight hover:text-primary"
                       >
@@ -169,7 +183,7 @@ export function FeaturedTasks({ rows, labels }: FeaturedTasksProps) {
                       <div className="flex flex-wrap items-center gap-2 pt-1">
                         <PriorityBadge
                           priority={row.priority}
-                          label={row.priority.charAt(0).toUpperCase() + row.priority.slice(1)}
+                          label={priorityLabel(row.priority, labels)}
                         />
                         <div className="flex flex-1 items-center gap-2">
                           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
@@ -184,11 +198,7 @@ export function FeaturedTasks({ rows, labels }: FeaturedTasksProps) {
                         </div>
                       </div>
                       <p className={cn("font-mono text-[11px] tabular-nums", dueTone)}>
-                        {days < 0
-                          ? `${Math.abs(days)}d overdue`
-                          : days === 0
-                            ? "Today"
-                            : `${days}d left`}
+                        {formatDays(days, labels)}
                       </p>
                     </div>
                   </li>

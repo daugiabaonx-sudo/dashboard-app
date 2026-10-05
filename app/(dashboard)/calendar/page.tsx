@@ -9,6 +9,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { JumpToTodayButton } from "@/components/calendar/jump-to-today-button";
 import { tasks, findUser, findProject } from "@/lib/data";
 import { priorityLabel, priorityTone, statusLabel, statusTone } from "@/lib/semantic";
+import { interpolate, makeTranslator, getRequestLocale, LOCALE_COOKIE_NAME } from "@/lib/i18n";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 
@@ -34,7 +36,11 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const VIEW_TABS = ["Month", "Week", "Day"] as const;
 
-export default function CalendarPage() {
+export default async function CalendarPage() {
+  const cookieStore = await cookies();
+  const locale = getRequestLocale(() => cookieStore.get(LOCALE_COOKIE_NAME)?.value);
+  const { t } = makeTranslator(locale);
+  const openTaskPattern = t("table.openTask");
   const cells = getMonthGrid(YEAR, MONTH);
   const tasksByDay = new Map<string, typeof tasks>();
   tasks.forEach((t) => {
@@ -136,7 +142,7 @@ export default function CalendarPage() {
                         <Link
                           key={t.id}
                           href={`/tasks?task=${t.id}`}
-                          aria-label={`Open task ${t.title}`}
+                          aria-label={interpolate(openTaskPattern, { title: t.title })}
                           className={cn(
                             "block truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                             t.status === "done" && "bg-status-good/10 text-status-good line-through",

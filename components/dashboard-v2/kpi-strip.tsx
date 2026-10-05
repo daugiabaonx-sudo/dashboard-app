@@ -23,21 +23,22 @@ const KPI_ICON: Record<DashboardKpi["id"], React.ReactNode> = {
 
 interface KpiStripProps {
   kpis: DashboardKpi[];
+  ariaLabel: string;
 }
 
-export function KpiStrip({ kpis }: KpiStripProps) {
+export function KpiStrip({ kpis, ariaLabel }: KpiStripProps) {
   return (
     <section
       className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
-      aria-label="Dashboard KPIs"
+      aria-label={ariaLabel}
     >
       {kpis.map((k, i) => (
         <KpiStripTile
           key={k.id}
-          label={k.label}
+          label={k.label ?? k.labelKey}
           value={k.value}
           delta={k.delta}
-          deltaLabel={k.deltaLabel}
+          deltaLabel={k.deltaLabel ?? k.deltaLabelKey}
           trend={k.trend}
           intent={k.intent}
           sparkline={k.sparkline}

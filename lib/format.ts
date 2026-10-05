@@ -36,3 +36,19 @@ export function formatCurrency(n: number): string {
 export function formatPercent(n: number): string {
   return `${Math.round(n)}%`;
 }
+
+export interface DaysLabels {
+  today: string;
+  daysOverduePattern: string;
+  daysLeftPattern: string;
+}
+
+export function formatDays(days: number, labels: DaysLabels): string {
+  if (days === 0) return labels.today;
+  if (days < 0) return labels.daysOverduePattern.replace("{n}", String(Math.abs(days)));
+  return labels.daysLeftPattern.replace("{n}", String(days));
+}
+
+export function formatDaysStuck(n: number, labels: { pattern: string }): string {
+  return labels.pattern.replace("{n}", String(n));
+}

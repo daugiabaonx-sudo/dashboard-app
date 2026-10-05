@@ -1,7 +1,8 @@
 "use client";
 
-// v2 top bar — sticky search, 3 filter chips, notification bell, user chip.
-// Mirrors the existing header behavior but restyled for the v2 layout grid.
+// v2 top bar — sticky search, 3 filter chips, locale switcher, theme toggle,
+// notification bell, user chip. Mirrors the existing header behavior but
+// restyled for the v2 layout grid.
 
 import { Moon, Plus, Search, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -9,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { FilterChip } from "@/components/dashboard/filter-chip";
+import { LocaleSwitcher } from "@/components/dashboard-v2/locale-switcher";
 import { NotificationsBell } from "@/components/layout/notifications-bell";
 import { SignOutMenu } from "@/components/layout/sign-out-menu";
 import type { DashboardProfile } from "@/lib/dashboard-data";
@@ -20,6 +22,11 @@ interface TopBarLabels {
   thisWeek: string;
   allTeams: string;
   allProjects: string;
+  language: string;
+  languageEn: string;
+  languageVi: string;
+  toggleTheme: string;
+  roleLabel: string;
 }
 
 interface TopBarProps {
@@ -70,12 +77,21 @@ export function TopBar({ labels, profile, newTask }: TopBarProps) {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Toggle theme"
+          aria-label={labels.toggleTheme}
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         >
           <Sun className="hidden dark:block" />
           <Moon className="block dark:hidden" />
         </Button>
+
+        <LocaleSwitcher
+          labels={{
+            trigger: labels.language,
+            language: labels.language,
+            languageEn: labels.languageEn,
+            languageVi: labels.languageVi,
+          }}
+        />
 
         <NotificationsBell />
 
@@ -85,8 +101,8 @@ export function TopBar({ labels, profile, newTask }: TopBarProps) {
           </Avatar>
           <div className="hidden lg:flex flex-col leading-tight">
             <span className="text-xs font-medium">{profile.name}</span>
-            <span className="text-[10px] text-muted-foreground capitalize">
-              {profile.role}
+            <span className="text-[10px] text-muted-foreground">
+              {labels.roleLabel}
             </span>
           </div>
           <SignOutMenu />

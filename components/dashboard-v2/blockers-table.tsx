@@ -5,6 +5,7 @@ import { AlertOctagon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PriorityBadge } from "@/components/dashboard-v2/priority-badge";
 import type { DashboardBlockerRow } from "@/lib/dashboard-data";
+import { formatDaysStuck } from "@/lib/format";
 
 interface BlockersLabels {
   title: string;
@@ -13,6 +14,10 @@ interface BlockersLabels {
   empty: string;
   severity: string;
   days: string;
+  priorityHigh: string;
+  priorityMedium: string;
+  priorityLow: string;
+  daysStuckPattern: string;
 }
 
 interface BlockersTableProps {
@@ -20,9 +25,18 @@ interface BlockersTableProps {
   labels: BlockersLabels;
 }
 
+function priorityLabel(
+  p: "high" | "medium" | "low",
+  labels: Pick<BlockersLabels, "priorityHigh" | "priorityMedium" | "priorityLow">,
+): string {
+  if (p === "high") return labels.priorityHigh;
+  if (p === "medium") return labels.priorityMedium;
+  return labels.priorityLow;
+}
+
 export function BlockersTable({ rows, labels }: BlockersTableProps) {
   return (
-    <Card className="animate-fade-up opacity-0" style={{ animationDelay: "200ms" }}>
+    <Card className="glass-card animate-fade-up opacity-0" style={{ animationDelay: "200ms" }}>
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -59,7 +73,7 @@ export function BlockersTable({ rows, labels }: BlockersTableProps) {
                 </span>
                 <div className="min-w-0 flex-1 space-y-1">
                   <Link
-                    href={`/tasks/${row.id}`}
+                    href={`/tasks?focus=${row.id}`}
                     prefetch={false}
                     className="block text-[13.5px] font-medium leading-snug tracking-tight hover:text-primary"
                   >
@@ -79,14 +93,14 @@ export function BlockersTable({ rows, labels }: BlockersTableProps) {
                       <span aria-hidden>·</span>
                     </span>
                     <span className="font-mono tabular-nums">
-                      {row.daysStuck} {labels.days}
+                      {formatDaysStuck(row.daysStuck, { pattern: labels.daysStuckPattern })}
                     </span>
                   </div>
                 </div>
                 <div className="hidden shrink-0 sm:flex sm:flex-col sm:items-end sm:gap-1">
                   <PriorityBadge
                     priority={row.severity}
-                    label={`${labels.severity}: ${row.severity.charAt(0).toUpperCase() + row.severity.slice(1)}`}
+                    label={`${labels.severity}: ${priorityLabel(row.severity, labels)}`}
                   />
                 </div>
               </li>

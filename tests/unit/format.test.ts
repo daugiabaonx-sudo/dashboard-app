@@ -7,6 +7,8 @@ import {
   formatShortDate,
   formatRelative,
   daysUntil,
+  formatDays,
+  formatDaysStuck,
   formatNumber,
   formatCurrency,
   formatPercent,
@@ -70,5 +72,44 @@ describe("formatPercent", () => {
   it("rounds to the nearest integer and appends %", () => {
     expect(formatPercent(33.7)).toBe("34%");
     expect(formatPercent(66.4)).toBe("66%");
+  });
+});
+
+describe("formatDays", () => {
+  const labels = {
+    today: "Hôm nay",
+    daysOverduePattern: "Trễ {n} ngày",
+    daysLeftPattern: "Còn {n} ngày",
+  };
+
+  it("returns the today label when days is 0", () => {
+    expect(formatDays(0, labels)).toBe("Hôm nay");
+  });
+
+  it("formats overdue days with absolute value (negative input)", () => {
+    expect(formatDays(-3, labels)).toBe("Trễ 3 ngày");
+  });
+
+  it("formats future days with the daysLeft pattern", () => {
+    expect(formatDays(5, labels)).toBe("Còn 5 ngày");
+  });
+
+  it("ignores sign of overdue input — uses abs(n)", () => {
+    expect(formatDays(-7, labels)).toBe("Trễ 7 ngày");
+    expect(formatDays(7, labels)).toBe("Còn 7 ngày");
+  });
+});
+
+describe("formatDaysStuck", () => {
+  it("substitutes the stuck pattern with the day count", () => {
+    expect(formatDaysStuck(3, { pattern: "{n}d stuck" })).toBe("3d stuck");
+  });
+
+  it("renders the Vietnamese variant", () => {
+    expect(formatDaysStuck(5, { pattern: "{n} ngày" })).toBe("5 ngày");
+  });
+
+  it("handles 0 days stuck", () => {
+    expect(formatDaysStuck(0, { pattern: "{n}d stuck" })).toBe("0d stuck");
   });
 });

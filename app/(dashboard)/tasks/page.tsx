@@ -1,58 +1,152 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { KanbanBoard } from "@/components/tasks/kanban-board";
-import { TaskRow } from "@/components/tasks/task-row";
-import { TasksToolbar } from "@/components/tasks/tasks-toolbar";
-import { PageHeader } from "@/components/layout/page-header";
-import { tasks, projects } from "@/lib/data";
-import { DEFAULT_WORKSPACE_ID } from "@/lib/constants";
+// v2 Tasks page — server composition that calls getDashboardTasks() and
+// hands the result to the AnimatedTable client component. URL-as-state is
+// read here and serialized into the `rows` prop; the client owns the
+// interactive filter/sort/page state.
+
+import { cookies } from "next/headers";
+import { Sidebar } from "@/components/dashboard-v2/sidebar";
+import { TopBar } from "@/components/dashboard-v2/top-bar";
+import { ShutterText } from "@/components/dashboard-v2/shutter-text";
+import { TasksPageBridge } from "@/components/dashboard-v2/task-modal/tasks-page-bridge";
+import { getDashboardSummary, type DashboardFeaturedRow } from "@/lib/dashboard-data";
+import { getDashboardTasks } from "@/lib/tasks-data";
+import {
+  LOCALE_COOKIE_NAME,
+  getRequestLocale,
+  makeTranslator,
+} from "@/lib/i18n";
+import { formatDate } from "@/lib/format";
 
 interface TasksPageProps {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ focus?: string }>;
 }
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
   const params = await searchParams;
-  const view = params.view === "board" ? "board" : "list";
-  const open = tasks.filter((t) => t.status !== "done").length;
-  const overdue = tasks.filter(
-    (t) => t.status !== "done" && new Date(t.dueDate) < new Date(),
-  ).length;
-  const blocked = tasks.filter((t) => t.blocked).length;
+  const focusId = typeof params.focus === "string" ? params.focus : undefined;
+  const summary = getDashboardSummary({ userId: "u1", role: "admin" });
+  const cookieStore = await cookies();
+  const locale = getRequestLocale(() => cookieStore.get(LOCALE_COOKIE_NAME)?.value);
+  const { t } = makeTranslator(locale);
 
-  const projectOptions = projects.map((p) => ({ id: p.id, name: p.name }));
+  const rows = getDashboardTasks();
+
+  const sidebarLabels = {
+    overview: t("sidebar.overview"),
+    tasks: t("sidebar.tasks"),
+    projects: t("sidebar.projects"),
+    employees: t("sidebar.employees"),
+    reports: t("sidebar.reports"),
+    calendar: t("sidebar.calendar"),
+    notifications: t("sidebar.notifications"),
+    settings: t("sidebar.settings"),
+    statusOk: t("sidebar.statusOk"),
+    statusHint: t("sidebar.statusHint"),
+  };
+
+  const topBarLabels = {
+    searchPlaceholder: t("topBar.searchPlaceholder"),
+    filters: t("topBar.filters"),
+    thisWeek: t("dashboard.filters.thisWeek"),
+    allTeams: t("dashboard.filters.allTeams"),
+    allProjects: t("dashboard.filters.allProjects"),
+    language: t("topBar.language"),
+    languageEn: t("topBar.languageEn"),
+    languageVi: t("topBar.languageVi"),
+    toggleTheme: t("topBar.toggleTheme"),
+    roleLabel:
+      summary.profile.role === "admin"
+        ? t("profile.admin")
+        : t("profile.member"),
+  };
+
+  const tableLabels = {
+    title: t("view.tasks.title"),
+    search: t("table.search"),
+    columns: t("table.columns"),
+    showAll: t("table.showAll"),
+    hideAll: t("table.hideAll"),
+    rowsPerPage: t("table.rowsPerPage"),
+    page: t("table.page"),
+    of: t("table.of"),
+    showing: t("table.showing"),
+    noResults: t("table.noResults"),
+    today: t("common.today"),
+    daysOverduePattern: t("common.daysOverduePattern"),
+    daysLeftPattern: t("common.daysLeftPattern"),
+    openTask: t("table.openTask"),
+    column: {
+      task: t("table.task"),
+      project: t("table.project"),
+      status: t("table.status"),
+      priority: t("table.priority"),
+      assignee: t("table.assignee"),
+      progress: t("table.progress"),
+      deadline: t("table.deadline"),
+    },
+    statusLabels: {
+      backlog: t("dashboard.tableStatus.backlog"),
+      todo: t("dashboard.tableStatus.todo"),
+      in_progress: t("dashboard.tableStatus.inProgress"),
+      in_review: t("dashboard.tableStatus.inReview"),
+      done: t("dashboard.tableStatus.done"),
+    },
+    priorityLabels: {
+      low: t("priority.low"),
+      medium: t("priority.medium"),
+      high: t("priority.high"),
+      urgent: t("priority.urgent"),
+    },
+    blockerTitle: t("modal.task.blockerTitle"),
+    blockedBy: t("dashboard.blockers.blockedBy"),
+  };
+
+  const modalLabels = {
+    title: t("modal.task.title"),
+    status: t("modal.task.status"),
+    priority: t("modal.task.priority"),
+    progress: t("modal.task.progress"),
+    notes: t("modal.task.notes"),
+    save: t("modal.task.save"),
+    cancel: t("modal.task.cancel"),
+    saved: t("modal.task.saved"),
+    savedHint: t("modal.task.savedHint"),
+    statusLabels: tableLabels.statusLabels,
+    priorityLabels: tableLabels.priorityLabels,
+  };
+
+  const dateLabel = formatDate(new Date().toISOString(), "EEEE, MMM d");
 
   return (
-    <div className="space-y-10 animate-fade-in">
-      <PageHeader
-        eyebrow={`${open} open · ${overdue} overdue · ${blocked} blocked`}
-        title={<>What needs to <span className="italic text-primary">ship</span>.</>}
-        description="All open work, sorted by urgency. Switch the view to see the same work as a Kanban spread."
-        actions={null}
-      />
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:w-60 lg:block">
+        <Sidebar labels={sidebarLabels} />
+      </div>
+      <div className="lg:pl-60">
+        <TopBar profile={summary.profile} labels={topBarLabels} />
+        <main className="mx-auto max-w-[1440px] space-y-6 px-4 pb-8 pt-6 lg:px-8">
+          <header className="flex flex-col gap-2">
+            <p className="text-[12px] text-muted-foreground">
+              <span className="font-medium">{dateLabel}</span>
+            </p>
+            <h1 className="font-display text-[32px] font-normal leading-[1.05] tracking-[-0.02em] md:text-[40px]">
+              <ShutterText text={t("view.tasks.title")} />
+            </h1>
+            <p className="max-w-2xl text-[14px] leading-relaxed text-muted-foreground">
+              {t("view.tasks.subtitle")}
+            </p>
+          </header>
 
-      <TasksToolbar view={view} projects={projectOptions} />
-
-      {view === "board" ? (
-        <KanbanBoard initialTasks={tasks} workspaceId={DEFAULT_WORKSPACE_ID} />
-      ) : (
-        <Card className="animate-fade-up opacity-0" style={{ animationDelay: "80ms" }}>
-          <CardContent className="p-0">
-            <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-3 border-b border-border px-4 py-2.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              <span className="w-4" />
-              <span>Task</span>
-              <span className="hidden md:block">Status / Priority</span>
-              <span className="hidden sm:block">Due</span>
-              <span>Assignee</span>
-              <span className="w-4" />
-            </div>
-            <div className="divide-y divide-border">
-              {tasks.map((t) => (
-                <TaskRow key={t.id} task={t} />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          <TasksPageBridge
+            rows={rows}
+            tableLabels={tableLabels}
+            modalLabels={modalLabels}
+            focusId={focusId}
+          />
+        </main>
+      </div>
     </div>
   );
 }
+
+export const dynamic = "force-dynamic";

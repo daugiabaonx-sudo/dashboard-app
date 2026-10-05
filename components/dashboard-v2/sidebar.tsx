@@ -1,7 +1,10 @@
 "use client";
 
-// v2 sidebar — 240px wide, theme-aware surface, gradient active pill, 8 nav items.
-// Uses the new SUNEXT brand wordmark with theme-aware variant selection.
+// v2 sidebar — 240px wide, theme-aware surface, liquid-metal nav items,
+// 8 nav links. The active item keeps the brand-gradient background for
+// accessibility (color + position) while the surrounding liquid border
+// pulses around it. Hover state shows the liquid border + a sweep
+// shimmer that follows the cursor.
 
 import {
   Bell,
@@ -15,7 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ComponentType } from "react";
+import { useCallback, useState, type ComponentType, type CSSProperties, type MouseEvent } from "react";
 import { cn } from "@/lib/cn";
 import { SunextLogo } from "@/components/brand/sunext-logo";
 
@@ -61,8 +64,33 @@ interface SidebarProps {
   labels: SidebarLabels;
 }
 
+type LiquidStyle = CSSProperties & {
+  ["--mx"]?: string;
+  ["--my"]?: string;
+};
+
 export function Sidebar({ labels }: SidebarProps) {
   const pathname = usePathname();
+  // Per-item mouse position so the cursor-following gradient can move
+  // between items without re-rendering the whole list.
+  const [hoverPos, setHoverPos] = useState<Record<string, LiquidStyle>>({});
+
+  const handleMouseMove = useCallback(
+    (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+      const target = event.currentTarget;
+      const rect = target.getBoundingClientRect();
+      const mx = `${event.clientX - rect.left}px`;
+      const my = `${event.clientY - rect.top}px`;
+      setHoverPos((prev) => {
+        const current = prev[href];
+        // Skip the setState if nothing changed — keeps hover tracking free
+        // when the cursor is idle over a nav item.
+        if (current?.["--mx"] === mx && current?.["--my"] === my) return prev;
+        return { ...prev, [href]: { ["--mx"]: mx, ["--my"]: my } };
+      });
+    },
+    [],
+  );
 
   const labelOf = (key: NavItem["labelKey"]) => {
     switch (key) {
@@ -89,7 +117,7 @@ export function Sidebar({ labels }: SidebarProps) {
     <aside
       className={cn(
         "flex h-full w-60 flex-col",
-        "border-r border-border bg-card/60 backdrop-blur-sm",
+        "border-r border-border bg-card/60 backdrop-blur-md",
       )}
     >
       <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
@@ -107,11 +135,13 @@ export function Sidebar({ labels }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              prefetch={false}
+              data-nav-href={item.href}
+              onMouseMove={handleMouseMove(item.href)}
+              style={hoverPos[item.href]}
               className={cn(
-                "group flex items-center gap-3 rounded-md px-3 py-2 text-[13.5px] font-medium transition-all",
+                "nav-item-liquid group flex items-center gap-3 rounded-md px-3 py-2 text-[13.5px] font-medium transition-all",
                 isActive
-                  ? "bg-brand text-white shadow-soft"
+                  ? "active bg-brand text-white shadow-soft"
                   : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
               )}
               aria-current={isActive ? "page" : undefined}

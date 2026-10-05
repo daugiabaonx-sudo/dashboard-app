@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getDashboardSummary } from "@/lib/dashboard-data";
+import {
+  getDashboardSummary,
+  localizeKpis,
+  type DashboardKpi,
+} from "@/lib/dashboard-data";
 
 describe("getDashboardSummary", () => {
   const summary = getDashboardSummary({ userId: "u-001", role: "admin" });
@@ -37,11 +41,13 @@ describe("getDashboardSummary", () => {
     }
   });
 
-  it("every KPI carries a delta, deltaLabel, trend and intent", () => {
+  it("every KPI carries a delta, deltaLabelKey, trend and intent", () => {
     for (const kpi of summary.kpis) {
       expect(typeof kpi.delta).toBe("number");
-      expect(typeof kpi.deltaLabel).toBe("string");
-      expect(kpi.deltaLabel.length).toBeGreaterThan(0);
+      expect(typeof kpi.deltaLabelKey).toBe("string");
+      expect(kpi.deltaLabelKey.length).toBeGreaterThan(0);
+      expect(typeof kpi.labelKey).toBe("string");
+      expect(kpi.labelKey.length).toBeGreaterThan(0);
       expect(["up", "down", "flat"]).toContain(kpi.trend);
       expect(["neutral", "good", "warning", "critical"]).toContain(kpi.intent);
     }
@@ -85,7 +91,8 @@ describe("getDashboardSummary", () => {
     expect(summary.statusDonut.total).toBeGreaterThan(0);
     expect(summary.statusDonut.slices.length).toBeGreaterThan(0);
     for (const slice of summary.statusDonut.slices) {
-      expect(typeof slice.label).toBe("string");
+      expect(typeof slice.labelKey).toBe("string");
+      expect(slice.labelKey.length).toBeGreaterThan(0);
       expect(typeof slice.value).toBe("number");
       expect(typeof slice.color).toBe("string");
     }
@@ -100,5 +107,62 @@ describe("getDashboardSummary role gating", () => {
     expect(admin.kpis).toHaveLength(member.kpis.length);
     expect(admin.featured).toHaveLength(member.featured.length);
     expect(admin.blockers).toHaveLength(member.blockers.length);
+  });
+});
+
+describe("localizeKpis", () => {
+  const summary = getDashboardSummary({ userId: "u-001", role: "admin" });
+
+  it("resolves every labelKey and deltaLabelKey to a translated string", () => {
+    const t = (path: string) => {
+      const labels: Record<string, string> = {
+        "kpiLabels.total": "Tổng công việc",
+        "kpiLabels.completed": "Hoàn thành",
+        "kpiLabels.inProgress": "Đang làm",
+        "kpiLabels.overdue": "Quá hạn",
+        "kpiLabels.blocked": "Bị chặn",
+        "kpiLabels.vsLastWeek": "so với tuần trước",
+        "kpiLabels.thisWeek": "tuần này",
+        "kpiLabels.ofTotal": "trên tổng số",
+      };
+      return labels[path] ?? path;
+    };
+
+    const localized = localizeKpis(summary.kpis, t);
+    expect(localized).toHaveLength(summary.kpis.length);
+    for (const k of localized) {
+      expect(k.label).toBeDefined();
+      expect(k.label).not.toMatch(/\./); // no raw dotted key
+      expect(k.deltaLabel).toBeDefined();
+      expect(k.deltaLabel).not.toMatch(/\./);
+    }
+    expect(localized[0]?.label).toBe("Tổng công việc");
+    expect(localized[3]?.label).toBe("Quá hạn");
+    expect(localized[3]?.deltaLabel).toBe("trên tổng số");
+  });
+
+  it("preserves identity fields untouched", () => {
+    const t = (path: string) => path;
+    const localized = localizeKpis(summary.kpis, t);
+    expect(localized.map((k) => k.id)).toEqual(summary.kpis.map((k) => k.id));
+    expect(localized.map((k) => k.value)).toEqual(
+      summary.kpis.map((k) => k.value),
+    );
+    expect(localized.map((k) => k.delta)).toEqual(
+      summary.kpis.map((k) => k.delta),
+    );
+    expect(localized.map((k) => k.trend)).toEqual(
+      summary.kpis.map((k) => k.trend),
+    );
+  });
+
+  it("does not mutate the input array (immutable)", () => {
+    const t = (path: string) => path;
+    const before = summary.kpis.map((k) => ({ ...k }));
+    localizeKpis(summary.kpis, t);
+    expect(summary.kpis).toEqual(before);
+    for (let i = 0; i < summary.kpis.length; i++) {
+      expect((summary.kpis[i] as DashboardKpi).label).toBeUndefined();
+    }
   });
 });

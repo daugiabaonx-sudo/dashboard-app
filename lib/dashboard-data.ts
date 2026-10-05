@@ -35,10 +35,25 @@ export type DashboardTrend = "up" | "down" | "flat";
 
 export interface DashboardKpi {
   id: DashboardKpiId;
-  label: string;
+  /**
+   * Translation key for the KPI label. Consumers resolve via
+   * `makeTranslator(locale).t(labelKey)` so the label tracks the active
+   * locale instead of being baked in at module load time.
+   */
+  labelKey: string;
+  /**
+   * Optional pre-translated override. Used when the caller wants to
+   * inject a value computed from data (rare). When `label` is provided
+   * directly, `labelKey` is ignored.
+   */
+  label?: string;
   value: number;
   delta: number;
-  deltaLabel: string;
+  /**
+   * Translation key for the delta suffix (e.g. "vs last week").
+   */
+  deltaLabelKey: string;
+  deltaLabel?: string;
   trend: DashboardTrend;
   intent: DashboardKpiIntent;
   sparkline: number[];
@@ -69,7 +84,14 @@ export interface DashboardBlockerRow {
 }
 
 export interface DashboardDonutSlice {
-  label: string;
+  /**
+   * Translation key for the slice label. Consumers resolve via
+   * `makeTranslator(locale).t(labelKey)` so the legend tracks the active
+   * locale. The `status` field below is the canonical identity key.
+   */
+  labelKey: string;
+  label?: string;
+  status: TaskStatus;
   value: number;
   color: string;
 }
@@ -112,50 +134,50 @@ function buildKpis(counts: ReturnType<typeof deriveKpiCounts>): DashboardKpi[] {
   return [
     {
       id: "total",
-      label: "Total tasks",
+      labelKey: "kpiLabels.total",
       value: counts.total,
       delta: 12,
-      deltaLabel: "vs last week",
+      deltaLabelKey: "kpiLabels.vsLastWeek",
       trend: "up",
       intent: "neutral",
       sparkline: SPARKLINE.total,
     },
     {
       id: "completed",
-      label: "Completed",
+      labelKey: "kpiLabels.completed",
       value: counts.completed,
       delta: 8,
-      deltaLabel: "this week",
+      deltaLabelKey: "kpiLabels.thisWeek",
       trend: "up",
       intent: "good",
       sparkline: SPARKLINE.completed,
     },
     {
       id: "inProgress",
-      label: "In progress",
+      labelKey: "kpiLabels.inProgress",
       value: counts.inProgress,
       delta: 5,
-      deltaLabel: "of total",
+      deltaLabelKey: "kpiLabels.ofTotal",
       trend: "down",
       intent: "neutral",
       sparkline: SPARKLINE.inProgress,
     },
     {
       id: "overdue",
-      label: "Overdue",
+      labelKey: "kpiLabels.overdue",
       value: counts.overdue,
       delta: counts.overdue > 0 ? 1 : 0,
-      deltaLabel: "of total",
+      deltaLabelKey: "kpiLabels.ofTotal",
       trend: overdueTrend,
       intent: counts.overdue > 0 ? "critical" : "good",
       sparkline: SPARKLINE.overdue,
     },
     {
       id: "blocked",
-      label: "Blocked",
+      labelKey: "kpiLabels.blocked",
       value: counts.blocked,
       delta: 20,
-      deltaLabel: "of total",
+      deltaLabelKey: "kpiLabels.ofTotal",
       trend: "down",
       intent: counts.blocked > 0 ? "warning" : "good",
       sparkline: SPARKLINE.blocked,
@@ -263,12 +285,12 @@ const DONUT_COLOR_TOKENS: Record<TaskStatus, string> = {
   backlog: "var(--status-neutral-strong)",
 };
 
-const DONUT_LABEL: Record<TaskStatus, string> = {
-  done: "Done",
-  in_review: "In review",
-  in_progress: "In progress",
-  todo: "To do",
-  backlog: "Backlog",
+const DONUT_LABEL_KEY: Record<TaskStatus, string> = {
+  done: "dashboard.status.done",
+  in_review: "dashboard.status.inReview",
+  in_progress: "dashboard.status.inProgress",
+  todo: "dashboard.status.todo",
+  backlog: "dashboard.status.backlog",
 };
 
 function buildDonut(): DashboardDonut {
@@ -280,7 +302,8 @@ function buildDonut(): DashboardDonut {
     "backlog",
   ];
   const slices = order.map((status) => ({
-    label: DONUT_LABEL[status],
+    labelKey: DONUT_LABEL_KEY[status],
+    status,
     value: tasks.filter((t) => t.status === status).length,
     color: DONUT_COLOR_TOKENS[status],
   }));
@@ -311,6 +334,23 @@ export function getDashboardSummary(scope: DashboardScope): DashboardSummary {
     blockers: buildBlockers(4),
     statusDonut: buildDonut(),
   };
+}
+
+/**
+ * Resolve every `labelKey` / `deltaLabelKey` on a KPI list to its translated
+ * string. Returns a new array — does not mutate the input. Use this at the
+ * server component boundary so the `KpiStrip` consumer can render pre-resolved
+ * labels without leaking raw dotted keys.
+ */
+export function localizeKpis(
+  kpis: readonly DashboardKpi[],
+  t: (path: string) => string,
+): DashboardKpi[] {
+  return kpis.map((k) => ({
+    ...k,
+    label: t(k.labelKey),
+    deltaLabel: t(k.deltaLabelKey),
+  }));
 }
 
 // TODO: swap to lib/db/stats.ts#getKpis(workspaceId) once the real adapter

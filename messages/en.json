@@ -20,12 +20,20 @@
       "thisWeek": "this week",
       "vsYesterday": "of total",
       "needsAttention": "of total",
-      "next7Days": "of total"
+      "next7Days": "of total",
+      "ariaLabel": "Dashboard KPIs"
     },
     "status": {
       "title": "Task status",
       "subtitle": "Tasks distribution by status",
       "total": "Tasks",
+      "backlog": "Backlog",
+      "todo": "To do",
+      "inProgress": "In progress",
+      "inReview": "In review",
+      "done": "Done"
+    },
+    "tableStatus": {
       "backlog": "Backlog",
       "todo": "To do",
       "inProgress": "In progress",
@@ -38,6 +46,7 @@
       "empty": "No blocked tasks 🎉",
       "viewAll": "View all",
       "blockedBy": "Blocked by",
+      "severity": "Severity",
       "due": "Due"
     },
     "featured": {
@@ -59,7 +68,15 @@
   },
   "topBar": {
     "searchPlaceholder": "Search tasks, employees, projects…",
-    "filters": "Filters"
+    "filters": "Filters",
+    "newTask": "New task",
+    "language": "Language",
+    "languageEn": "English",
+    "languageVi": "Vietnamese",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "toggleTheme": "Toggle theme"
   },
   "sidebar": {
     "overview": "Overview",
@@ -69,7 +86,9 @@
     "reports": "Reports",
     "calendar": "Calendar",
     "notifications": "Notifications",
-    "settings": "Settings"
+    "settings": "Settings",
+    "statusOk": "All systems operational",
+    "statusHint": "Realtime sync active · last incident 14d ago"
   },
   "status": {
     "inProgress": "In progress",
@@ -83,7 +102,10 @@
   "priority": {
     "high": "High",
     "medium": "Medium",
-    "low": "Low"
+    "low": "Low",
+    "urgent": "Urgent",
+    "labelPattern": "Priority: {value}",
+    "severityPattern": "Severity: {value}"
   },
   "kpiLabels": {
     "total": "Total tasks",
@@ -94,6 +116,10 @@
     "vsLastWeek": "vs last week",
     "thisWeek": "this week",
     "ofTotal": "of total"
+  },
+  "profile": {
+    "admin": "Admin",
+    "member": "Member"
   },
   "table": {
     "employee": "Employee",
@@ -109,7 +135,108 @@
     "time": "Time",
     "severity": "Severity",
     "days": "days",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "owner": "Owner",
+    "risk": "Risk",
+    "title": "Title",
+    "actions": "Actions",
+    "rowsPerPage": "Rows per page",
+    "page": "1",
+    "of": "of",
+    "showing": "Showing",
+    "noResults": "No results found.",
+    "columns": "Columns",
+    "showAll": "Show all",
+    "hideAll": "Hide all",
+    "search": "Search tasks…",
+    "openTask": "Open task {title}"
+  },
+  "view": {
+    "tasks": {
+      "title": "All tasks",
+      "subtitle": "Manage, sort and filter every task across the workspace.",
+      "empty": "No tasks yet.",
+      "coming": "This view is coming soon — work in progress."
+    },
+    "projects": {
+      "title": "Projects",
+      "subtitle": "Track progress and health across all projects.",
+      "coming": "Project list will appear here."
+    },
+    "employees": {
+      "title": "Employees",
+      "subtitle": "Manage members and workload distribution.",
+      "coming": "Employee list will appear here."
+    },
+    "reports": {
+      "title": "Reports",
+      "subtitle": "Statistics, trends and performance insights.",
+      "coming": "Reports will appear here."
+    },
+    "calendar": {
+      "title": "Calendar",
+      "subtitle": "Meetings, deadlines and team events.",
+      "coming": "Calendar will appear here."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "subtitle": "All recent activity in your workspace.",
+      "coming": "Notifications will appear here."
+    },
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Customize your dashboard.",
+      "coming": "Settings will appear here."
+    }
+  },
+  "greeting": {
+    "typewriter": {
+      "prefix": "Hello",
+      "words": ["there", "Minh", "SUNEXT team", "everyone"],
+      "cursor": ""
+    },
+    "morph": {
+      "lines": [
+        "Let's take a look at this week's team progress!",
+        "A perfect day to ship something great!",
+        "There are 19 deadlines coming up this week."
+      ]
+    }
+  },
+  "healthMark": {
+    "title": "Project health",
+    "subtitle": "Overview of progress and health across projects",
+    "onTrack": "On track",
+    "atRisk": "At risk",
+    "blocked": "Blocked",
+    "tasks": "tasks",
+    "done": "done"
+  },
+  "workload": {
+    "title": "Team workload",
+    "subtitle": "Task distribution across members",
+    "activeTasks": "tasks",
+    "utilization": "Utilization"
+  },
+  "notificationsPanel": {
+    "title": "Notifications",
+    "empty": "No new notifications.",
+    "markAllRead": "Mark all read"
+  },
+  "modal": {
+    "task": {
+      "title": "Task details",
+      "status": "Status",
+      "progress": "Progress",
+      "priority": "Priority",
+      "notes": "Notes",
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "saved": "Task updated",
+      "savedHint": "Saved locally — will sync once realtime reconnects.",
+      "blockerTitle": "Blocker",
+      "noBlocker": "No blocker"
+    }
   },
   "common": {
     "loading": "Loading…",
@@ -125,6 +252,10 @@
     "ago": "ago",
     "in": "in",
     "overdue": "Overdue",
+    "today": "Today",
+    "daysOverduePattern": "{n}d overdue",
+    "daysLeftPattern": "{n}d left",
+    "daysStuckPattern": "{n}d stuck",
     "welcomeBack": "Welcome back, {name}"
   }
 }
