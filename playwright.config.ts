@@ -82,5 +82,19 @@ export default defineConfig({
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
+        // The Next.js production server reads env at start time, and
+        // Playwright spawns the webServer with its own env (it does NOT
+        // inherit the job env). Pass the mock-mode variables here so the
+        // server can boot; the test process picks up the job env via the
+        // `env` block on the workflow step. MOCK_SUPABASE=1 is the
+        // CI default — realmode launches its own stack and skips this
+        // webServer (see `realmodeOnly` above).
+        env: {
+          MOCK_SUPABASE: "1",
+          NEXT_PUBLIC_SUPABASE_URL:
+            process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
+          NEXT_PUBLIC_SUPABASE_ANON_KEY:
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "mock-anon-key-replace-me",
+        },
       },
 });
