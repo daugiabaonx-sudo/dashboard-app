@@ -11,7 +11,8 @@ test.describe("Navigation & cross-page", () => {
     }
 
     const primaryNav = page.locator("nav[aria-label='Primary']:visible");
-    const dashLink = primaryNav.getByRole("link", { name: /dashboard/i });
+    // Sidebar v2 uses "Overview" for the root route, not "Dashboard".
+    const dashLink = primaryNav.getByRole("link", { name: /overview/i });
     await expect(dashLink).toHaveAttribute("aria-current", "page");
 
     await primaryNav.getByRole("link", { name: /projects/i }).click();

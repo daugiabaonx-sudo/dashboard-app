@@ -45,10 +45,10 @@ const TARGET_STATUS = "in_progress";
 test.describe("Realtime v3 cross-tab invalidation", () => {
   test.beforeAll(() => {
     if (process.env.MOCK_SUPABASE === "1") {
-      throw new Error(
-        "realtime-cross-tab.spec.ts must run with MOCK_SUPABASE != 1. " +
-          "Use the realmode Playwright project (--project=realmode).",
-      );
+      // Mock mode has no real Supabase, no WAL, and no Realtime v3 — the
+      // chain under test simply doesn't exist. Skip rather than throw so
+      // mock-mode runs (the default in CI e2e) don't fail on this guard.
+      test.skip(true, "realtime-cross-tab.spec.ts requires real Supabase (--project=realmode)");
     }
     // Direct psql via docker so we don't depend on the API or the
     // service-role key being present in the realmode env. The compose

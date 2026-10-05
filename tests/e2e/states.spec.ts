@@ -39,7 +39,9 @@ test.describe("Theme & a11y basics", () => {
       if (msg.type() === "error") errors.push(msg.text());
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("main")).toBeVisible();
+    // The v2 layout renders two <main> elements (a hidden sidebar <main>
+    // and the content <main>); pick the visible one.
+    await expect(page.locator("main:visible").first()).toBeVisible();
     // Give client hydration a moment to surface any runtime errors. The
     // 500ms window is enough for React 19 hydration errors and CSP/
     // module-loading failures to surface as `console.error`. We do NOT
@@ -73,7 +75,7 @@ test.describe("Theme & a11y basics", () => {
     for (const route of routes) {
       const res = await page.goto(route);
       expect(res?.status(), `Route ${route} should return 200`).toBe(200);
-      await expect(page.locator("main")).toBeVisible();
+      await expect(page.locator("main:visible").first()).toBeVisible();
     }
   });
 });

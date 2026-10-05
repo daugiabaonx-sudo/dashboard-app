@@ -17,8 +17,10 @@ test.describe("Dashboard overview", () => {
     await expect(page.getByText(/^completed$/i)).toBeVisible();
     await expect(page.getByText(/^in progress$/i).first()).toBeVisible();
 
-    // Status donut — anchored by the "Tasks" badge inside the chart
-    await expect(page.getByText(/^tasks$/i)).toBeVisible();
+    // Status donut — anchored by the card title heading
+    await expect(
+      page.getByRole("heading", { name: /task status/i, level: 3 }),
+    ).toBeVisible();
 
     // Featured tasks section
     await expect(page.getByText(/featured tasks/i)).toBeVisible();
@@ -122,7 +124,7 @@ test.describe("Dashboard visual regression", () => {
       await page.goto("/");
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       // KPI strip should reflow to 2 columns at this width
-      const kpiSection = page.locator('section[aria-label*="tasks" i]').first();
+      const kpiSection = page.locator('section[aria-label="Dashboard KPIs"]').first();
       await expect(kpiSection).toBeVisible();
       await page.waitForTimeout(500);
       await page.screenshot({

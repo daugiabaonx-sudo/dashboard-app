@@ -159,7 +159,7 @@ jobs:
           MOCK_SUPABASE: 1
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-replace-me
-        run: npx playwright test --project=chromium --workers=2
+        run: npx playwright test --project=chromium --workers=1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

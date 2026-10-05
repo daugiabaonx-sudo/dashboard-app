@@ -19,7 +19,12 @@ import { expect, test } from "@playwright/test";
 // the in-hook invalidation.
 
 test.describe("Realtime invalidation (mock pub/sub)", () => {
-  test("kanban column counts move when a task status changes", async ({
+  // The v2 surface removed the /tasks?view=board kanban layout — the
+  // realtime invalidation chain (mutation → mock pub/sub → debounced
+  // invalidate → re-fetch) is now exercised by tests/e2e/animated-table.spec.ts
+  // and tests/e2e/task-modal.spec.ts via the list view + task modal. The
+  // dedicated kanban assertion below is skipped until a board view returns.
+  test.skip("kanban column counts move when a task status changes", async ({
     page,
   }) => {
     await page.goto("/tasks?view=board");
