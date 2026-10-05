@@ -154,6 +154,20 @@ jobs:
             psql -v ON_ERROR_STOP=1 -f "$f"
           done
           psql -v ON_ERROR_STOP=1 -f supabase/seed.sql
+      # Build the standalone server here. GH Actions doesn't share
+      # workspace between jobs, so the artifact produced by the `build`
+      # job is NOT visible to `e2e` — we re-run `next build` in this
+      # job. next.config.ts sets `output: "standalone"`, so this
+      # produces `.next/standalone/server.js` which Playwright's
+      # webServer invokes directly. Building with the same env as the
+      # test process (MOCK_SUPABASE=1) keeps the server's mock-mode
+      # contract identical to the runner.
+      - name: Production build
+        env:
+          MOCK_SUPABASE: 1
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-replace-me
+        run: npm run build
       - name: Run Playwright (chromium only in CI)
         env:
           MOCK_SUPABASE: 1
