@@ -78,23 +78,30 @@ export default defineConfig({
   webServer: realmodeOnly
     ? undefined
     : {
-        command: `npm run start -- -p ${PORT}`,
+        // The Next.js config sets `output: "standalone"` so the proper
+        // production entrypoint is `.next/standalone/server.js` (a
+        // self-contained Node server with traced deps copied in).
+        // Running `next start` against a standalone build emits a
+        // warning AND can fail to boot in CI (the standalone copy is
+        // missing files `next start` expects to find in the project
+        // tree). Use the standalone entry directly.
+        command: `node .next/standalone/server.js`,
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
-        // The Next.js production server reads env at start time, and
-        // Playwright spawns the webServer with its own env (it does NOT
+        // Playwright spawns webServer with its own env (it does NOT
         // inherit the job env). Pass the mock-mode variables here so the
-        // server can boot; the test process picks up the job env via the
-        // `env` block on the workflow step. MOCK_SUPABASE=1 is the
-        // CI default — realmode launches its own stack and skips this
-        // webServer (see `realmodeOnly` above).
+        // server has the same contract as the test runner.
+        // MOCK_SUPABASE=1 is the CI default — realmode launches its own
+        // stack and skips this webServer (see `realmodeOnly` above).
         env: {
           MOCK_SUPABASE: "1",
           NEXT_PUBLIC_SUPABASE_URL:
             process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
           NEXT_PUBLIC_SUPABASE_ANON_KEY:
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "mock-anon-key-replace-me",
+          PORT,
+          HOSTNAME: "127.0.0.1",
         },
       },
 });
