@@ -168,6 +168,17 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: mock-anon-key-replace-me
         run: npm run build
+      # output: "standalone" intentionally skips `public/` and `.next/static/`
+      # — those are expected to be served by a CDN in production. In CI
+      # (no CDN) we copy them next to server.js so the server returns the
+      # client JS chunks instead of 404-ing every chunk as `text/plain`.
+      # Without this step, React never hydrates: client components render
+      # only as static HTML, no event handlers bind, and any test that
+      # depends on a click/URL update (sort, search, pagination) fails.
+      - name: Copy static assets into standalone
+        run: |
+          cp -r public .next/standalone/
+          cp -r .next/static .next/standalone/.next/
       - name: Run Playwright (chromium only in CI)
         env:
           MOCK_SUPABASE: 1

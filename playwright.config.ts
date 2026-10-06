@@ -85,6 +85,16 @@ export default defineConfig({
         // warning AND can fail to boot in CI (the standalone copy is
         // missing files `next start` expects to find in the project
         // tree). Use the standalone entry directly.
+        //
+        // IMPORTANT: `output: "standalone"` does NOT copy `public/` or
+        // `.next/static/` into the standalone bundle (those are
+        // expected to be served by a CDN in production). Without
+        // `cp -r public .next/standalone/ && cp -r .next/static
+        // .next/standalone/.next/` after `next build`, every client JS
+        // chunk 404s as `text/plain` and React never hydrates — every
+        // test that needs an interactive assertion (click, URL update)
+        // will fail. CI runs that copy step in the e2e job; run it
+        // locally before `playwright test` if you just rebuilt.
         command: `node .next/standalone/server.js`,
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
