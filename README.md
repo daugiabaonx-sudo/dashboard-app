@@ -1,5 +1,7 @@
 # SUNEXT Dashboard
 
+<!-- trigger: deploy v2 surface to production -->
+
 Operations dashboard for project + task tracking. A Next.js 16 app router
 project with Supabase (Postgres + PostgREST) on the back end and an
 in-memory mock for offline development.
