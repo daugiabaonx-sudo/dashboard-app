@@ -9,16 +9,29 @@ import {
 
 describe("ratelimit helpers", () => {
   describe("classifyBucket", () => {
-    it("groups all /api/auth/* under the auth bucket", () => {
-      expect(classifyBucket("/api/auth/sign-in")).toBe("auth");
-      expect(classifyBucket("/api/auth/sign-up")).toBe("auth");
-      expect(classifyBucket("/api/auth/refresh")).toBe("auth");
+    it("groups all /api/auth/* under the auth bucket regardless of method", () => {
+      expect(classifyBucket("/api/auth/sign-in", "GET")).toBe("auth");
+      expect(classifyBucket("/api/auth/sign-up", "POST")).toBe("auth");
+      expect(classifyBucket("/api/auth/refresh", "POST")).toBe("auth");
     });
 
-    it("groups everything else under the write bucket", () => {
-      expect(classifyBucket("/api/projects")).toBe("write");
-      expect(classifyBucket("/api/tasks/123")).toBe("write");
-      expect(classifyBucket("/api/notifications")).toBe("write");
+    it("routes safe methods (GET/HEAD/OPTIONS) to the read bucket", () => {
+      // Reads (no body) shouldn't share the write bucket — a single dashboard
+      // page load fires several GETs (useProjects, useNotifications, etc.) and
+      // a 77-spec CI suite that all originates from 127.0.0.1 will trip a
+      // 120/min write cap with no actual writes happening.
+      expect(classifyBucket("/api/projects", "GET")).toBe("read");
+      expect(classifyBucket("/api/tasks/123", "GET")).toBe("read");
+      expect(classifyBucket("/api/notifications", "GET")).toBe("read");
+      expect(classifyBucket("/api/projects", "HEAD")).toBe("read");
+      expect(classifyBucket("/api/projects", "OPTIONS")).toBe("read");
+    });
+
+    it("routes state-changing methods to the write bucket", () => {
+      expect(classifyBucket("/api/projects", "POST")).toBe("write");
+      expect(classifyBucket("/api/tasks/123", "PATCH")).toBe("write");
+      expect(classifyBucket("/api/tasks/123/status", "PUT")).toBe("write");
+      expect(classifyBucket("/api/tasks/123", "DELETE")).toBe("write");
     });
   });
 

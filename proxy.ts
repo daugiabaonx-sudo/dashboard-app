@@ -67,7 +67,7 @@ function applyApiGuards(
   if (!pathname.startsWith("/api/")) return null;
 
   const clientIp = resolveClientIp(request.headers, "unknown");
-  const bucket = classifyBucket(pathname);
+  const bucket = classifyBucket(pathname, method);
   const rl = consume(bucket, clientIp);
   if (!rl.ok) {
     const res = NextResponse.json(
