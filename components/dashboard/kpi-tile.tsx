@@ -97,33 +97,29 @@ export function KpiTile({
   delay = 0,
   intent = "neutral",
 }: BaseProps) {
+  const iconTone: Record<KpiIntent, string> = {
+    neutral: "blue",
+    good: "green",
+    warning: "orange",
+    critical: "red",
+  };
+
   const content = (
     <div
       className={cn(
-        "group relative flex h-full flex-col justify-between rounded-lg border border-border bg-card p-5 shadow-soft transition-all duration-200",
-        "hover:border-foreground/15 hover:shadow-elevated",
-        "motion-safe:animate-fade-up motion-safe:opacity-0",
+        "surface-kpi group motion-safe:animate-fade-up motion-safe:opacity-0",
+        "min-h-[148px] p-5",
       )}
       style={{ animationDelay: `${delay * 80}ms` }}
     >
-      <div className="flex items-start justify-between">
-        {icon && (
-          <div className="flex size-9 items-center justify-center rounded-md bg-secondary text-muted-foreground transition-colors group-hover:text-foreground">
-            {icon}
-          </div>
-        )}
-        <DeltaChip delta={delta} trend={trend} intent={intent} />
-      </div>
-      <div className="mt-6 space-y-1">
-        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-          {label}
-        </p>
-        <p className="font-display text-[40px] font-normal leading-none tracking-[-0.02em] text-foreground tabular-nums">
-          {value}
-        </p>
-        {deltaLabel && (
-          <p className="pt-1 text-[12px] text-muted-foreground">{deltaLabel}</p>
-        )}
+      {icon && <span className={cn("stat-icon", iconTone[intent])}>{icon}</span>}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="stat-label text-muted-foreground">{label}</p>
+          <DeltaChip delta={delta} trend={trend} intent={intent} />
+        </div>
+        <p className="stat-number text-foreground tabular-nums">{value}</p>
+        {deltaLabel && <p className="stat-caption">{deltaLabel}</p>}
       </div>
     </div>
   );
@@ -164,41 +160,38 @@ export function KpiStripTile({
           ? "critical"
           : "neutral";
 
+  // Map KPI intent to the futuristic stat-icon color slot.
+  const iconTone: Record<KpiIntent, string> = {
+    neutral: "blue",
+    good: "green",
+    warning: "orange",
+    critical: "red",
+  };
+
   const content = (
     <div
       className={cn(
-        "group relative flex h-full flex-col justify-between rounded-lg border border-border bg-card p-4 shadow-soft transition-all duration-200",
-        "hover:border-foreground/15 hover:shadow-elevated",
-        "motion-safe:animate-fade-up motion-safe:opacity-0",
+        "surface-kpi group motion-safe:animate-fade-up motion-safe:opacity-0",
+        "px-4 py-3",
       )}
       style={{ animationDelay: `${delay * 60}ms` }}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {iconBlock && (
-            <div className="flex size-8 items-center justify-center rounded-md bg-brand text-white shadow-soft">
-              {iconBlock}
+      <span className={cn("stat-icon", iconTone[intent])}>{iconBlock}</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="stat-label text-muted-foreground">{label}</p>
+          <DeltaChip delta={delta} trend={trend} intent={intent} />
+        </div>
+        <div className="mt-1 flex items-end justify-between gap-3">
+          <p className="stat-number text-foreground tabular-nums">{value}</p>
+          {sparkline && sparkline.length > 1 && (
+            <div className="w-24">
+              <Sparkline data={sparkline} intent={sparklineIntent} />
             </div>
           )}
-          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            {label}
-          </p>
         </div>
-        <DeltaChip delta={delta} trend={trend} intent={intent} />
+        {deltaLabel && <p className="stat-caption">{deltaLabel}</p>}
       </div>
-      <div className="mt-3 flex items-end justify-between gap-3">
-        <p className="font-display text-[28px] font-normal leading-none tracking-[-0.02em] text-foreground tabular-nums">
-          {value}
-        </p>
-        {sparkline && sparkline.length > 1 && (
-          <div className="w-24">
-            <Sparkline data={sparkline} intent={sparklineIntent} />
-          </div>
-        )}
-      </div>
-      {deltaLabel && (
-        <p className="mt-2 text-[11px] text-muted-foreground">{deltaLabel}</p>
-      )}
     </div>
   );
 

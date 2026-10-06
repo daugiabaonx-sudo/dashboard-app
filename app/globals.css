@@ -50,6 +50,10 @@
   --color-sunext-purple: var(--sunext-purple);
   --color-sunext-orange: var(--sunext-orange);
 
+  --color-purple-brand: var(--purple-brand);
+  --color-cyan-brand: var(--cyan-brand);
+  --color-teal-brand: var(--teal-brand);
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -120,92 +124,135 @@
      stays visible on a card surface in both light + dark modes. */
   --track: oklch(0.9 0.006 80);
 
-  /* SUNEXT brand — purple → orange gradient; same stops across themes. */
+  /* SUNEXT brand — purple → cyan → teal. Same stops across themes
+     so the gradient identity is consistent regardless of mode. */
   --sunext-purple: #782DDC;
   --sunext-orange: #FF860E;
+  --purple-brand: #7f5cff;
+  --cyan-brand: #21b9ff;
+  --teal-brand: #18e0cc;
   --brand-gradient: linear-gradient(
-    129.3deg,
-    var(--sunext-purple) 0%,
-    var(--sunext-orange) 100%
+    110deg,
+    #7f5cff 0%,
+    #21b9ff 48%,
+    #18e0cc 100%
   );
 
   /* Cyan accent — used by glass surfaces, the liquid-metal nav, the
-     radial health-ring, and typewriter/morph accent text. Slightly
-     different in each theme so it stays visible on its background. */
+     radial health-ring, and typewriter/morph accent text. Same in
+     both themes now (template line 2469). */
   --cyan: #28d7ff;
-  --cyan-soft: color-mix(in oklch, var(--cyan) 22%, transparent);
-  --cyan-deep: #0891b2;
-  --metal-glow: color-mix(in oklch, var(--sunext-purple) 60%, transparent);
+  --cyan-soft: rgba(40, 215, 255, 0.12);
+  --cyan-deep: #18e0cc;
+  --metal-glow: color-mix(in oklch, var(--purple-brand) 60%, transparent);
 }
 
-/* Dark luxury — ink + warm shadow, same restrained indigo */
+/* Dark futuristic — lifted from the imported template (HTML lines
+   2446–2511). Deep navy surfaces, blue-tinted glass, purple→cyan→teal
+   brand gradient, multi-layer shadows with inset top-highlight. */
 .dark {
-  --background: oklch(0.16 0.012 270);
-  --foreground: oklch(0.96 0.005 80);
-  --surface: oklch(0.19 0.012 270);
-  --surface-foreground: oklch(0.94 0.005 80);
-  --card: oklch(0.2 0.012 270);
-  --card-foreground: oklch(0.96 0.005 80);
-  --popover: oklch(0.22 0.012 270);
-  --popover-foreground: oklch(0.96 0.005 80);
+  /* Surfaces — deep navy with blue glass tint */
+  --background: #040b1d;
+  --foreground: #f6f9ff;
+  --surface: rgba(8, 24, 55, 0.86);
+  --surface-foreground: #f6f9ff;
+  --card: rgba(8, 24, 55, 0.86);
+  --card-foreground: #f6f9ff;
+  --popover: rgba(8, 24, 55, 0.96);
+  --popover-foreground: #f6f9ff;
 
-  --primary: oklch(0.72 0.13 270);
-  --primary-foreground: oklch(0.16 0.012 270);
+  /* Primary — deep electric purple (template --purple) */
+  --primary: #7f5cff;
+  --primary-foreground: #040b1d;
 
-  --secondary: oklch(0.26 0.012 270);
-  --secondary-foreground: oklch(0.94 0.005 80);
-  --muted: oklch(0.24 0.012 270);
-  --muted-foreground: oklch(0.65 0.012 270);
-  --accent: oklch(0.26 0.014 270);
-  --accent-foreground: oklch(0.96 0.005 80);
+  /* Neutrals — translucent blue, not opaque gray */
+  --secondary: rgba(32, 74, 137, 0.32);
+  --secondary-foreground: #f6f9ff;
+  --muted: rgba(112, 157, 225, 0.14);
+  --muted-foreground: #aebbd2;
+  --accent: #21b9ff;
+  --accent-foreground: #040b1d;
 
-  --destructive: oklch(0.65 0.2 27);
-  --destructive-foreground: oklch(0.96 0.005 80);
+  --destructive: #ff6170;
+  --destructive-foreground: #040b1d;
 
-  --border: oklch(0.28 0.012 270);
-  --input: oklch(0.28 0.012 270);
-  --ring: oklch(0.72 0.13 270);
+  /* Lines — barely-there blue, same hue as the atmosphere */
+  --border: rgba(112, 157, 225, 0.14);
+  --input: rgba(112, 157, 225, 0.14);
+  --ring: #21b9ff;
 
-  --status-good: oklch(0.7 0.14 152);
-  --chart-completed: oklch(0.7 0.14 152);
-  --chart-created: oklch(0.72 0.13 270);
-  --status-warning: oklch(0.78 0.14 75);
-  --status-serious: oklch(0.72 0.16 35);
-  --status-critical: oklch(0.68 0.2 27);
-  --status-neutral: oklch(0.38 0.012 270);
-  --status-neutral-strong: oklch(0.5 0.014 270);
+  /* Status — template palette */
+  --status-good: #27e0b3;
+  --chart-completed: #27e0b3;
+  --chart-created: #7f5cff;
+  --status-warning: #ffc45d;
+  --status-serious: #ff8a35;
+  --status-critical: #ff6170;
+  --status-neutral: rgba(112, 157, 225, 0.14);
+  --status-neutral-strong: #7887a5;
 
-  /* Today — calendar "today" surface + ring, distinct from --primary */
-  --today: oklch(0.34 0.06 270);
-  --today-ring: oklch(0.78 0.08 270);
+  /* Today — purple-soft surface, cyan ring */
+  --today: rgba(127, 92, 255, 0.18);
+  --today-ring: #21b9ff;
 
-  /* Calendar out-of-month — recessed behind in-month cells */
-  --calendar-out-of-month: oklch(0.16 0.012 270);
-  --calendar-out-of-month-fg: oklch(0.5 0.012 270);
+  /* Calendar out-of-month — recessed in the navy bg */
+  --calendar-out-of-month: #071329;
+  --calendar-out-of-month-fg: #7887a5;
 
-  /* Chart scaffolding — visible gridline on card surface in both themes */
-  --chart-grid: oklch(0.34 0.012 270);
+  /* Chart scaffolding — visible blue gridline on card surface */
+  --chart-grid: rgba(112, 157, 225, 0.14);
 
-  /* Track — unfilled switch / progress rail. In dark mode it has to be
-     lighter than the card surface (~oklch 0.2) so the OFF state reads. */
-  --track: oklch(0.32 0.012 270);
+  /* Track — unfilled switch / progress rail, slightly stronger than border */
+  --track: rgba(112, 157, 225, 0.18);
 
-  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.2);
-  --shadow-elevated: 0 2px 4px -1px rgb(0 0 0 / 0.3),
-    0 4px 12px -2px rgb(0 0 0 / 0.4);
-  --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.5),
-    0 4px 12px -4px rgb(0 0 0 / 0.3);
+  /* Shadows — template: layered with inset top-highlight + blue glow */
+  --shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.23),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  --shadow-elevated: 0 18px 50px rgba(0, 0, 0, 0.33),
+    0 0 40px rgba(16, 119, 255, 0.055),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-overlay: 0 14px 36px rgba(104, 79, 255, 0.26);
 
-  /* Dark-mode cyan tuning — brighter for the same readability on the
-     deeper surface. */
-  --cyan: #5fe4ff;
-  --cyan-soft: color-mix(in oklch, var(--cyan) 30%, transparent);
-  --cyan-deep: #67e8f9;
-  --metal-glow: color-mix(in oklch, var(--sunext-purple) 70%, transparent);
+  /* Brand tokens — purple / cyan / teal, same in both themes now */
+  --purple-brand: #7f5cff;
+  --cyan-brand: #21b9ff;
+  --teal-brand: #18e0cc;
+  --cyan: #28d7ff;
+  --cyan-soft: rgba(40, 215, 255, 0.12);
+  --cyan-deep: #18e0cc;
+  --metal-glow: color-mix(in oklch, var(--purple-brand) 70%, transparent);
 }
 
 * {
   border-color: var(--border);
+}
+
+/* Dark futuristic — atmospheric body layer (template lines 2513–2536).
+   4-stop radial gradient + 48px grid overlay with bottom-fade mask.
+   Scoped to `.dark` so light mode keeps its paper surface. */
+.dark body {
+  background-attachment: fixed;
+  background:
+    radial-gradient(circle at 78% -10%, rgba(45, 83, 255, 0.23), transparent 30%),
+    radial-gradient(circle at 18% 28%, rgba(112, 50, 255, 0.14), transparent 26%),
+    radial-gradient(circle at 88% 72%, rgba(0, 208, 255, 0.08), transparent 28%),
+    linear-gradient(145deg, #030817 0%, #07142e 45%, #061126 100%);
+  color: var(--foreground);
+}
+
+.dark body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.18;
+  background-image:
+    linear-gradient(rgba(91, 139, 212, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(91, 139, 212, 0.1) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), transparent 82%);
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.72), transparent 82%);
 }
 
 html,
@@ -367,7 +414,7 @@ a:focus:not(:focus-visible) {
 .bg-donut-radial {
   background-image: radial-gradient(
     circle at 30% 20%,
-    color-mix(in oklch, var(--sunext-purple) 12%, transparent) 0%,
+    color-mix(in oklch, var(--purple-brand) 12%, transparent) 0%,
     transparent 60%
   );
 }
@@ -514,7 +561,7 @@ a:focus:not(:focus-visible) {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
     pointer-events: none;
   }
 
@@ -544,6 +591,584 @@ a:focus:not(:focus-visible) {
   .glass-card {
     background: var(--card);
   }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   DARK FUTURISTIC SURFACES — ported from the imported template
+   (HTML lines 1015–2923). The class names mirror the template's
+   `.panel`, `.stat-card`, `.donut`, `.stat-icon.*`, `.priority.*`,
+   `.status.*`, `.progress-fill`, `.toast`, `.modal` so existing
+   markup that already uses these names picks up the new look
+   automatically once any consumer switches to the new utilities.
+   Theme-aware: light values come from the existing oklch palette;
+   dark values are the template's blue/navy tones.
+   ═══════════════════════════════════════════════════════════ */
+
+/* PANEL — base card surface used for tables, side cards, modals.
+   Pairs with `.glass-card` for translucent panels. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .surface-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: var(--card);
+    box-shadow: var(--shadow-elevated);
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    transition:
+      box-shadow 0.3s ease,
+      border-color 0.3s ease,
+      transform 0.3s var(--transition);
+  }
+
+  .surface-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.035),
+      transparent 24%,
+      transparent 76%,
+      rgba(39, 174, 255, 0.025)
+    );
+  }
+
+  .surface-panel:hover {
+    border-color: color-mix(in oklch, var(--primary) 28%, transparent);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .surface-panel {
+    background: var(--card);
+  }
+}
+
+/* PANEL HEADER — separator + title block. */
+.surface-panel-header {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.surface-panel-title {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+/* KPI / STAT CARD — number tile with icon block on the left. */
+.surface-kpi {
+  position: relative;
+  overflow: hidden;
+  min-height: 124px;
+  display: flex;
+  align-items: center;
+  padding: 17px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow-elevated);
+  transition:
+    transform 0.3s var(--transition),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* Decorative glow blob top-right — template lines 1044–1081. */
+.surface-kpi::before {
+  content: "";
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  top: -60px;
+  right: -55px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+  filter: blur(22px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.surface-kpi:hover {
+  border-color: color-mix(in oklch, var(--primary) 24%, transparent);
+  transform: translateY(-3px);
+}
+
+.surface-kpi:hover::before {
+  opacity: 0.7;
+}
+
+/* KILL the ::before blob in dark mode where it overwhelms the atmosphere
+   — template uses opacity: 0.7 only in light; dark is too busy. */
+.dark .surface-kpi::before {
+  opacity: 0.3;
+}
+
+.dark .surface-kpi:hover::before {
+  opacity: 0.55;
+}
+
+/* STAT ICON — 56x56 colored block on the left of a KPI. */
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-right: 15px;
+  transition: transform 0.3s var(--transition);
+}
+
+.surface-kpi:hover .stat-icon {
+  transform: rotate(-4deg) scale(1.07);
+}
+
+.stat-icon svg {
+  width: 27px;
+  height: 27px;
+  stroke-width: 2.2;
+}
+
+.stat-icon.purple {
+  color: var(--status-serious);
+  background: color-mix(in oklch, var(--status-serious) 12%, transparent);
+}
+.stat-icon.violet {
+  color: #784ae8;
+  background: #f0eaff;
+}
+.stat-icon.green {
+  color: var(--status-good);
+  background: color-mix(in oklch, var(--status-good) 14%, transparent);
+}
+.stat-icon.red {
+  color: var(--status-critical);
+  background: color-mix(in oklch, var(--status-critical) 13%, transparent);
+}
+.stat-icon.orange {
+  color: var(--status-serious);
+  background: color-mix(in oklch, var(--status-serious) 13%, transparent);
+}
+.stat-icon.cyan {
+  color: var(--cyan);
+  background: color-mix(in oklch, var(--cyan) 13%, transparent);
+}
+.stat-icon.blue {
+  color: var(--cyan-brand);
+  background: color-mix(in oklch, var(--cyan-brand) 13%, transparent);
+}
+
+/* Dark-mode stat-icon backgrounds — match template line 2730–2753
+   (gradient backgrounds, not flat tints). */
+.dark .stat-icon.purple,
+.dark .stat-icon.violet {
+  color: #a98cff;
+  background: linear-gradient(
+    145deg,
+    rgba(122, 91, 255, 0.18),
+    rgba(83, 74, 205, 0.08)
+  );
+}
+.dark .stat-icon.green {
+  color: #38e0bc;
+  background: linear-gradient(
+    145deg,
+    rgba(31, 225, 183, 0.18),
+    rgba(18, 116, 118, 0.08)
+  );
+}
+.dark .stat-icon.red {
+  color: #ff7180;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 94, 111, 0.18),
+    rgba(142, 42, 66, 0.08)
+  );
+}
+.dark .stat-icon.orange {
+  color: #ffac62;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 144, 64, 0.18),
+    rgba(156, 74, 29, 0.08)
+  );
+}
+.dark .stat-icon.cyan,
+.dark .stat-icon.blue {
+  color: #54c9ff;
+  background: linear-gradient(
+    145deg,
+    rgba(40, 184, 255, 0.18),
+    rgba(18, 96, 142, 0.08)
+  );
+}
+
+/* STAT NUMBER — big numeric with optional glow. */
+.stat-number {
+  color: var(--foreground);
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+.dark .stat-number {
+  color: #fff;
+  text-shadow: 0 0 18px rgba(51, 166, 255, 0.06);
+}
+
+.stat-label {
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-caption {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.stat-change {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.stat-change.up,
+.stat-change.good {
+  color: var(--status-good);
+}
+.stat-change.down {
+  color: var(--status-critical);
+}
+
+/* MINI BARS — corner chart (4 bars, animated). */
+.mini-bars {
+  position: absolute;
+  right: 15px;
+  bottom: 16px;
+  height: 34px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+.mini-bars span {
+  width: 5px;
+  border-radius: 4px 4px 1px 1px;
+  transform-origin: bottom;
+  animation: barGrow 0.75s var(--transition) both;
+}
+.mini-bars span:nth-child(1) { height: 12px; animation-delay: 0.1s; }
+.mini-bars span:nth-child(2) { height: 19px; animation-delay: 0.17s; }
+.mini-bars span:nth-child(3) { height: 26px; animation-delay: 0.24s; }
+.mini-bars span:nth-child(4) { height: 34px; animation-delay: 0.31s; }
+
+.mini-bars.purple span {
+  background: linear-gradient(180deg, #bc94ff, #7b2ff2);
+}
+.mini-bars.green span {
+  background: linear-gradient(180deg, #93f7d3, #17c98b);
+}
+.mini-bars.red span {
+  background: linear-gradient(180deg, #ffacb0, #ff4d57);
+}
+.mini-bars.orange span {
+  background: linear-gradient(180deg, #ffc987, #ff7a00);
+}
+.mini-bars.cyan span,
+.mini-bars.blue span {
+  background: linear-gradient(180deg, #66d9ff, #6c62ff);
+  box-shadow: 0 0 10px rgba(54, 170, 255, 0.2);
+}
+
+@keyframes barGrow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+/* DONUT — conic gradient with center mask creating a ring.
+   Template lines 1663–1690, 2870–2884. The component supplies a
+   100% (filled) circle; the conic stops are rotated per-slice via
+   CSS custom props the parent sets inline. */
+.donut {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--purple-brand) 0deg calc(var(--donut-pct, 60) * 3.6deg),
+    var(--cyan-brand) calc(var(--donut-pct, 60) * 3.6deg) 360deg
+  );
+  box-shadow: 0 0 38px rgba(42, 148, 255, 0.09);
+}
+
+/* Center mask — creates the ring. ~62% inner so ring thickness reads
+   as 38% of the diameter. */
+.donut::after {
+  content: "";
+  position: absolute;
+  inset: 18%;
+  border-radius: 50%;
+  background: var(--background);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.22);
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  z-index: 1;
+}
+
+.donut-center strong {
+  color: var(--foreground);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+.dark .donut-center strong {
+  color: #fff;
+}
+
+.donut-center small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* PRIORITY / STATUS CHIPS — template lines 2826–2857. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.priority.high,
+.severity.high,
+.status.overdue {
+  color: var(--status-critical);
+  background: color-mix(in oklch, var(--status-critical) 13%, transparent);
+  border: 1px solid color-mix(in oklch, var(--status-critical) 10%, transparent);
+}
+
+.priority.medium,
+.severity.medium {
+  color: var(--status-warning);
+  background: color-mix(in oklch, var(--status-warning) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--status-warning) 9%, transparent);
+}
+
+.priority.low {
+  color: var(--cyan);
+  background: color-mix(in oklch, var(--cyan) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--cyan) 9%, transparent);
+}
+
+.status.working,
+.status.in_progress {
+  color: var(--purple-brand);
+  background: color-mix(in oklch, var(--purple-brand) 13%, transparent);
+  border: 1px solid color-mix(in oklch, var(--purple-brand) 9%, transparent);
+}
+
+.status.done,
+.status.completed {
+  color: var(--status-good);
+  background: color-mix(in oklch, var(--status-good) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--status-good) 9%, transparent);
+}
+
+.status.in_review,
+.status.review {
+  color: var(--cyan);
+  background: color-mix(in oklch, var(--cyan) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--cyan) 9%, transparent);
+}
+
+.status.todo,
+.status.backlog {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--muted) 30%, transparent);
+  border: 1px solid var(--border);
+}
+
+/* PROGRESS BAR — track + brand-gradient fill. Template 2859–2868. */
+.progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6d62ff, #1fafff 55%, #23d9c3);
+  box-shadow: 0 0 15px rgba(39, 167, 255, 0.22);
+  border-radius: inherit;
+  transition: width 0.4s var(--transition);
+}
+
+/* INPUT — text/search/select surface used by topbar + filters. */
+.surface-input {
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 8px 24px rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  transition:
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.surface-input:focus {
+  border-color: color-mix(in oklch, var(--cyan-brand) 54%, transparent);
+  box-shadow:
+    0 0 0 4px color-mix(in oklch, var(--cyan-brand) 10%, transparent),
+    0 0 28px color-mix(in oklch, var(--cyan-brand) 8%, transparent);
+  outline: none;
+}
+
+.surface-input::placeholder {
+  color: var(--muted-foreground);
+}
+
+/* TOAST — bottom-right notification. Template 2917–2932. */
+.toast-futuristic {
+  position: relative;
+  border: 1px solid var(--border);
+  background: rgba(7, 23, 52, 0.96);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38),
+    0 0 34px rgba(28, 131, 255, 0.05);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 14px;
+  color: var(--foreground);
+  animation: toastIn 0.35s var(--transition) both;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-12px); }
+}
+
+/* MODAL — center dialog. Template 2906–2915. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .modal-futuristic {
+    border: 1px solid var(--border);
+    background: var(--card);
+    box-shadow: 0 35px 100px rgba(0, 0, 0, 0.52),
+      0 0 60px rgba(31, 135, 255, 0.08);
+    backdrop-filter: blur(24px) saturate(130%);
+    -webkit-backdrop-filter: blur(24px) saturate(130%);
+    border-radius: 18px;
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .modal-futuristic {
+    background: var(--card);
+  }
+}
+
+.modal-backdrop-futuristic {
+  background: rgba(1, 5, 14, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* MODAL ACCENT — small brand-gradient bar at the top of a dialog. */
+.modal-accent {
+  background: var(--brand-gradient);
+  box-shadow: 0 0 20px rgba(42, 178, 255, 0.24);
+  height: 3px;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+/* TOPBAR override — distinct from .glass-card for stronger blur. */
+.topbar-futuristic {
+  background: color-mix(in oklch, var(--background) 72%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(24px) saturate(135%);
+  -webkit-backdrop-filter: blur(24px) saturate(135%);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.11);
+}
+
+/* ICON BUTTON — circular hover, glow lift. Template 449–484. */
+.icon-button {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 11px;
+  color: var(--muted-foreground);
+  background: transparent;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  color: var(--cyan);
+  background: color-mix(in oklch, var(--cyan) 12%, transparent);
+  transform: translateY(-2px);
+}
+
+.dark .icon-button:hover {
+  color: #54c9ff;
+  background: rgba(36, 149, 255, 0.12);
+  box-shadow: 0 0 22px rgba(34, 152, 255, 0.08);
+}
+
+.icon-button svg {
+  width: 21px;
+  height: 21px;
+}
+
+/* SIDEBAR-TEAM — small profile block at sidebar bottom. */
+.sidebar-team {
+  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--card) 30%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  border-radius: 12px;
 }
 
 

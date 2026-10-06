@@ -4,7 +4,7 @@
 // notification bell, user chip. Mirrors the existing header behavior but
 // restyled for the v2 layout grid.
 
-import { Moon, Plus, Search, Sun } from "lucide-react";
+import { Moon, Search, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/avatar";
@@ -39,20 +39,18 @@ export function TopBar({ labels, profile, newTask }: TopBarProps) {
   const { resolvedTheme, setTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-30 flex h-18 items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur-md sm:gap-3 lg:px-8">
+    <header className="topbar-futuristic sticky top-0 z-30 flex h-18 items-center gap-2 px-4 sm:gap-3 lg:px-8">
       <div className="relative min-w-0 flex-1 max-w-xl">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="search"
           placeholder={labels.searchPlaceholder}
           className={cn(
-            "h-10 w-full rounded-md border border-input bg-secondary/40 pl-9 pr-12 text-sm",
-            "placeholder:text-muted-foreground/70",
-            "focus:bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background",
+            "surface-input h-10 w-full pl-9 pr-12 text-sm",
           )}
           aria-label={labels.searchPlaceholder}
         />
-        <kbd className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground md:inline">
+        <kbd className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-background/60 px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground md:inline">
           ⌘ K
         </kbd>
       </div>
@@ -74,15 +72,15 @@ export function TopBar({ labels, profile, newTask }: TopBarProps) {
       <div className="flex shrink-0 items-center gap-1">
         {newTask && <span className="hidden sm:inline-flex">{newTask}</span>}
 
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
+          type="button"
+          className="icon-button"
           aria-label={labels.toggleTheme}
           onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         >
           <Sun className="hidden dark:block" />
           <Moon className="block dark:hidden" />
-        </Button>
+        </button>
 
         <LocaleSwitcher
           labels={{

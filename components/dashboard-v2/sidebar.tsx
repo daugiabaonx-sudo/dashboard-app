@@ -116,8 +116,7 @@ export function Sidebar({ labels }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "flex h-full w-60 flex-col",
-        "border-r border-border bg-card/60 backdrop-blur-md",
+        "surface-panel flex h-full w-60 flex-col rounded-none border-y-0 border-l-0",
       )}
     >
       <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
@@ -161,7 +160,7 @@ export function Sidebar({ labels }: SidebarProps) {
       </nav>
 
       <div className="border-t border-border p-4">
-        <div className="rounded-lg bg-secondary/60 p-3">
+        <div className="sidebar-team p-3">
           <div className="flex items-center gap-2 text-xs font-medium text-foreground">
             <span className="relative flex size-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-status-good opacity-75" />

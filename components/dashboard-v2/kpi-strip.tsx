@@ -14,11 +14,11 @@ const KPI_HREF: Record<DashboardKpi["id"], string> = {
 };
 
 const KPI_ICON: Record<DashboardKpi["id"], React.ReactNode> = {
-  total: <ListTodo className="size-4 text-white" />,
-  completed: <CheckCircle2 className="size-4 text-white" />,
-  inProgress: <Clock className="size-4 text-white" />,
-  overdue: <AlertOctagon className="size-4 text-white" />,
-  blocked: <CircleDashed className="size-4 text-white" />,
+  total: <ListTodo aria-hidden />,
+  completed: <CheckCircle2 aria-hidden />,
+  inProgress: <Clock aria-hidden />,
+  overdue: <AlertOctagon aria-hidden />,
+  blocked: <CircleDashed aria-hidden />,
 };
 
 interface KpiStripProps {
