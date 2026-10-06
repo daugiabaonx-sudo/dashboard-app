@@ -57,9 +57,9 @@ export default async function CalendarPage() {
   return (
     <div className="space-y-10 animate-fade-in">
       <PageHeader
-        eyebrow={`${MONTH_NAME} ${YEAR} · ${upcoming} deadlines tracked`}
-        title={<>The month, <span className="italic text-primary">at a glance</span>.</>}
-        description={`${overdue} already overdue — catch those first. Hover any chip to see the assignee.`}
+        eyebrow={`Tháng ${MONTH + 1}/${YEAR} · ${upcoming} deadline đang theo dõi`}
+        title="Lịch công việc"
+        description={`${overdue} công việc đã trễ hạn — xử lý trước. Rê chuột lên từng công việc để xem người phụ trách.`}
         actions={
           <div className="flex items-center gap-1 rounded-md border border-border bg-card p-0.5">
             {VIEW_TABS.map((tab, i) => (

@@ -1,0 +1,146 @@
+/* SUNEXT template shell — hand-written companion to sx-theme.css.
+ *
+ * sx-theme.css is a verbatim (scoped) copy of the template stylesheet. The
+ * template was authored against *browser defaults*, while this app ships
+ * Tailwind's preflight reset (h1/h2/p margins, button chrome, svg display,
+ * line-height, ...). To render pixel-identical we roll every template
+ * element back to user-agent defaults with `all: revert`, wrapped in
+ * `:where()` so it has zero specificity and every template rule still wins.
+ *
+ * SVGs are excluded on purpose: `all: revert` would also override lucide's
+ * presentation attributes (fill="none", stroke="currentColor").
+ */
+
+:where(
+    .sx-root.sx-ov,
+    .sx-root.sx-ov *:not(svg, svg *),
+    .sx-root .sidebar,
+    .sx-root .sidebar *:not(svg, svg *),
+    .sx-root .sidebar-overlay,
+    .sx-root .topbar,
+    .sx-root .topbar *:not(svg, svg *),
+    .sx-root .toast-container,
+    .sx-root .toast-container *:not(svg, svg *)
+  ) {
+  all: revert;
+}
+
+/* Template SVGs are inline (UA default), Tailwind preflight makes them block. */
+:where(.sx-root.sx-ov, .sx-root .sidebar, .sx-root .topbar, .sx-root .toast-container) svg {
+  display: inline;
+  vertical-align: baseline;
+}
+
+.sx-root {
+  /* Stacking context so the template's fixed `body::before` grid layer
+   * (mapped to .sx-root::before, z-index:-1) sits above our background. */
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  line-height: normal;
+}
+
+/* ── Legacy pages rendered inside the template shell ─────────────────
+ * The template's `.content` is locked to one viewport (no scroll). Other
+ * dashboard pages keep their own Tailwind markup and need to scroll, so they
+ * render in `.sx-page` instead of `.content`. */
+.sx-root .sx-page {
+  min-width: 0;
+  padding: 16px 26px 24px;
+  line-height: 1.5;
+}
+
+@media (min-width: 1101px) {
+  .sx-root .sx-page {
+    height: calc(100vh - var(--sx-topbar-height));
+    overflow-y: auto;
+  }
+}
+
+/* Sidebar nav items are <a> links in the app (template uses <button>). */
+.sx-root .sidebar a.nav-item {
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+/* ── Template bug fixes ──────────────────────────────────────────────
+ * `.proj-page-nums` has no layout rule in the template; its buttons are
+ * display:flex (block-level), so with 2+ pages they stacked vertically. */
+.sx-root.sx-ov .proj-page-nums {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Template page views ─────────────────────────────────────────────
+ * Settings reset button: the template uses inline onmouseover handlers. */
+.sx-root.sx-ov .sx-reset-btn {
+  background: rgba(255, 138, 53, 0.1);
+}
+.sx-root.sx-ov .sx-reset-btn:hover {
+  background: rgba(255, 138, 53, 0.18);
+}
+
+/* Project / employee cards link to their detail pages. */
+.sx-root.sx-ov a.panel {
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.sx-root.sx-ov a.panel:hover {
+  transform: translateY(-2px);
+  border-color: rgba(139, 92, 246, 0.35);
+}
+
+/* Legacy Tailwind pages (reports, calendar, detail pages) render with the
+ * app's `.dark` tokens, which already mirror the template palette.
+ * Tailwind v4 emits `--color-x: var(--x)` on :root, so the var() is resolved
+ * there (light values) and inherited as-is. Re-bind the mappings here so the
+ * utilities pick up the nested `.dark` values. */
+.sx-root .sx-page.dark {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-strong: var(--status-neutral-strong);
+  --color-track: var(--track);
+  --color-purple-brand: var(--purple-brand);
+  --color-cyan-brand: var(--cyan-brand);
+  --color-teal-brand: var(--teal-brand);
+  color: var(--foreground);
+  background: transparent;
+  /* Template typography: Inter everywhere, no editorial serif. */
+  --font-serif: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.sx-root .sx-page.dark .font-display {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.sx-root .sx-page.dark h1.font-display {
+  font-size: clamp(22px, 2vw, 28px);
+  line-height: 1.15;
+}
+

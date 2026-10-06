@@ -61,15 +61,15 @@ export default function ReportsPage() {
     setNow(Date.now());
   }, []);
   const updatedLabel = now !== null
-    ? new Date(now).toLocaleString("en-US", { dateStyle: "medium" })
+    ? new Date(now).toLocaleString("vi-VN", { dateStyle: "medium" })
     : "";
 
   return (
     <div className="space-y-10 animate-fade-in">
       <PageHeader
-        eyebrow={`Last 8 weeks · Updated ${updatedLabel}`}
-        title={<>Numbers, <span className="italic text-primary">honestly</span>.</>}
-        description="What we shipped, what it cost, and where we're slipping. Pull a thread on any chart to inspect the underlying data."
+        eyebrow={`8 tuần gần nhất · Cập nhật ${updatedLabel}`}
+        title="Báo cáo"
+        description="Kết quả bàn giao, chi phí và những điểm đang chậm tiến độ của team."
         actions={null}
       />
 
