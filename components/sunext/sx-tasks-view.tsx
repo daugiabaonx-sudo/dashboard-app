@@ -22,7 +22,15 @@ export function SxTasksView({ dataset, focusId }: { dataset: SxDataset; focusId?
 
   return (
     <SxPageView>
-      <SxPageHero title="Tất cả công việc" subtitle={`${store.tasks.length} công việc trong hệ thống`} />
+      <SxPageHero
+        title="Tất cả công việc"
+        subtitle={
+          dataset.sourceNote ??
+          (store.isPlanner
+            ? `${store.tasks.length} công việc từ Microsoft Planner · chỉnh sửa sẽ lưu thẳng vào Planner`
+            : `${store.tasks.length} công việc trong hệ thống`)
+        }
+      />
       <div className="panel" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <div className="table-wrap" style={{ overflow: "auto", flex: 1, padding: "0 17px 17px" }}>
           <table className="tasks-table" style={{ minWidth: 760 }}>

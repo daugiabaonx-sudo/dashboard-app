@@ -4,7 +4,7 @@
 
 import type { Metadata } from "next";
 import { SxTasksView } from "@/components/sunext/sx-tasks-view";
-import { getSxPageData } from "@/lib/sx-page-data";
+import { getSxViewDataset } from "@/lib/sx-view-dataset";
 
 export const metadata: Metadata = { title: "Công việc · SUNEXT Dashboard" };
 
@@ -15,7 +15,7 @@ interface TasksPageProps {
 export default async function TasksPage({ searchParams }: TasksPageProps) {
   const params = await searchParams;
   const focusId = typeof params.focus === "string" ? params.focus : undefined;
-  const { dataset } = getSxPageData();
+  const dataset = await getSxViewDataset();
   return <SxTasksView dataset={dataset} focusId={focusId} />;
 }
 

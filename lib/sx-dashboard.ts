@@ -30,6 +30,8 @@ export interface SxProject {
   id: string;
   name: string;
   color: string;
+  /** Owning team / Microsoft 365 group (Planner plans only). */
+  group?: string;
 }
 
 export interface SxTask {
@@ -82,6 +84,24 @@ export interface SxDataset {
   blockers: SxBlocker[];
   projectHealth: SxProjectHealth[];
   notifications: SxNotification[];
+  /** Where the data comes from; undefined = in-app (mock / Supabase) data. */
+  source?: "planner";
+  /** Planner: project (plan) id → Microsoft Planner web URL. */
+  projectLinks?: Record<string, string>;
+  /** Planner: task id → ETag, required by Graph to modify the task. */
+  taskEtags?: Record<string, string>;
+  /** Notice shown under page titles (e.g. Planner failed to load). */
+  sourceNote?: string;
+}
+
+/** Fields the task modal can edit. */
+export interface SxTaskEdit {
+  status: SxStatus;
+  priority: SxPriority;
+  progress: number;
+  notes: string;
+  /** YYYY-MM-DD, or "" for no deadline. Absent in older saved edits. */
+  deadline?: string;
 }
 
 export interface SxFilters {

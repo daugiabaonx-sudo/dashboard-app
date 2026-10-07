@@ -5,14 +5,18 @@
 
 import { useEffect, useState } from "react";
 import { Save, X } from "lucide-react";
-import { formatDeadline, type SxBlocker, type SxEmployee, type SxPriority, type SxProject, type SxStatus, type SxTask } from "@/lib/sx-dashboard";
+import {
+  formatDeadline,
+  type SxBlocker,
+  type SxEmployee,
+  type SxPriority,
+  type SxProject,
+  type SxStatus,
+  type SxTask,
+  type SxTaskEdit,
+} from "@/lib/sx-dashboard";
 
-export interface SxTaskEdit {
-  status: SxStatus;
-  priority: SxPriority;
-  progress: number;
-  notes: string;
-}
+export type { SxTaskEdit };
 
 interface Props {
   task: SxTask | null;
@@ -21,16 +25,29 @@ interface Props {
   blockers: SxBlocker[];
   onClose: () => void;
   onSave: (id: string, edit: SxTaskEdit) => void;
+  /** True while the save is in flight (disables the button). */
+  saving?: boolean;
+  /** False for Microsoft Planner tasks — their notes are not synced. */
+  notesEnabled?: boolean;
 }
 
-export function SxTaskModal({ task, employees, projects, blockers, onClose, onSave }: Props) {
-  const [form, setForm] = useState<SxTaskEdit>({ status: "in_progress", priority: "medium", progress: 0, notes: "" });
+export function SxTaskModal({
+  task,
+  employees,
+  projects,
+  blockers,
+  onClose,
+  onSave,
+  saving = false,
+  notesEnabled = true,
+}: Props) {
+  const [form, setForm] = useState<SxTaskEdit>({ status: "in_progress", priority: "medium", progress: 0, notes: "", deadline: "" });
   const [fillWidth, setFillWidth] = useState(0);
   const open = task !== null;
 
   useEffect(() => {
     if (!task) return;
-    setForm({ status: task.status, priority: task.priority, progress: task.progress, notes: task.notes });
+    setForm({ status: task.status, priority: task.priority, progress: task.progress, notes: task.notes, deadline: task.deadline });
     setFillWidth(0);
     const raf = requestAnimationFrame(() => setFillWidth(task.progress));
     return () => cancelAnimationFrame(raf);
@@ -147,13 +164,37 @@ export function SxTaskModal({ task, employees, projects, blockers, onClose, onSa
             </div>
 
             <div>
-              <label htmlFor="modalNotes">Ghi chú</label>
-              <textarea id="modalNotes" className="modal-textarea" placeholder="Thêm ghi chú..." value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+              <label htmlFor="modalDeadlineInput">Deadline</label>
+              <input
+                type="date"
+                id="modalDeadlineInput"
+                className="modal-select"
+                value={form.deadline ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
+              />
             </div>
 
-            <button id="modalSaveBtn" className="modal-save-btn" onClick={() => task && onSave(task.id, form)}>
+            {notesEnabled ? (
+              <div>
+                <label htmlFor="modalNotes">Ghi chú</label>
+                <textarea id="modalNotes" className="modal-textarea" placeholder="Thêm ghi chú..." value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: 10, color: "var(--sx-text-muted)" }}>
+                Thay đổi sẽ được lưu thẳng vào Microsoft Planner.
+              </p>
+            )}
+
+            <button
+              id="modalSaveBtn"
+              className="modal-save-btn"
+              disabled={saving}
+              aria-busy={saving}
+              style={saving ? { opacity: 0.6, cursor: "wait" } : undefined}
+              onClick={() => task && !saving && onSave(task.id, form)}
+            >
               <Save />
-              Lưu thay đổi
+              {saving ? "Đang lưu..." : "Lưu thay đổi"}
             </button>
           </div>
         </div>
