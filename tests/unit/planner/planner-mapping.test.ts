@@ -95,6 +95,7 @@ describe("mapPlannerTask", () => {
       progress: 50,
       deadline: "2026-10-07",
       notes: "",
+      createdAt: "2026-10-01",
     });
   });
 
@@ -102,6 +103,16 @@ describe("mapPlannerTask", () => {
     const mapped = mapPlannerTask(task(), NOW);
     expect(mapped.employeeId).toBe(PLANNER_UNASSIGNED_ID);
     expect(mapped.deadline).toBe("");
+    expect(mapped.completedAt).toBeUndefined();
+  });
+
+  it("records created / completed days in Vietnam time", () => {
+    const mapped = mapPlannerTask(
+      task({ createdDateTime: "2026-09-30T18:00:00Z", percentComplete: 100, completedDateTime: "2026-10-05T20:00:00Z" }),
+      NOW,
+    );
+    expect(mapped.createdAt).toBe("2026-10-01");
+    expect(mapped.completedAt).toBe("2026-10-06");
   });
 });
 

@@ -96,7 +96,7 @@ export function SxTopbar(props: SxTopbarProps) {
   function onProfileAction(action: "profile" | "settings" | "logout") {
     setProfileOpen(false);
     if (action === "logout") void signOut();
-    else router.push(action === "profile" ? `/team/${profile.userId}` : "/settings");
+    else router.push("/settings");
   }
 
   return (

@@ -1,94 +1,91 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+// "Lịch" — month grid of Microsoft Planner task deadlines (Vietnam days,
+// Monday-first) and the upcoming list. Model: lib/sx-calendar.ts.
+
+import type { Metadata } from "next";
+import Link from "next/link";
+import { cookies } from "next/headers";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, Dot } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { JumpToTodayButton } from "@/components/calendar/jump-to-today-button";
-import { tasks, findUser, findProject } from "@/lib/data";
-import { priorityLabel, priorityTone, statusLabel, statusTone } from "@/lib/semantic";
+import { buildSxCalendar, type SxCalendarTask } from "@/lib/sx-calendar";
+import { vnTodayKey } from "@/lib/sx-dates";
+import type { SxPriority, SxStatus } from "@/lib/sx-dashboard";
+import { getSxViewDataset } from "@/lib/sx-view-dataset";
 import { interpolate, makeTranslator, getRequestLocale, LOCALE_COOKIE_NAME } from "@/lib/i18n";
-import { cookies } from "next/headers";
-import Link from "next/link";
 import { cn } from "@/lib/cn";
 
-const TODAY = new Date();
-const YEAR = TODAY.getFullYear();
-const MONTH = TODAY.getMonth();
-const MONTH_NAME = TODAY.toLocaleString("en-US", { month: "long" });
+export const metadata: Metadata = { title: "Lịch · SUNEXT Dashboard" };
 
-function getMonthGrid(year: number, month: number): (Date | null)[] {
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startOffset = firstDay.getDay();
-  const cells: (Date | null)[] = [];
-  for (let i = 0; i < startOffset; i++) cells.push(null);
-  for (let d = 1; d <= lastDay.getDate(); d++) {
-    cells.push(new Date(year, month, d));
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
-  return cells;
+type Tone = "neutral" | "primary" | "good" | "warning" | "serious" | "critical";
+
+const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+const MAX_PER_DAY = 3;
+
+const STATUS: Record<SxStatus, { label: string; tone: Tone }> = {
+  completed: { label: "Hoàn thành", tone: "good" },
+  in_progress: { label: "Đang làm", tone: "primary" },
+  not_started: { label: "Chưa bắt đầu", tone: "neutral" },
+  overdue: { label: "Quá hạn", tone: "critical" },
+  blocked: { label: "Bị chặn", tone: "serious" },
+};
+
+const PRIORITY: Record<SxPriority, { label: string; tone: Tone }> = {
+  high: { label: "Cao", tone: "serious" },
+  medium: { label: "Trung bình", tone: "primary" },
+  low: { label: "Thấp", tone: "neutral" },
+};
+
+const taskHref = (id: string) => `/tasks?focus=${encodeURIComponent(id)}`;
+
+function DayTask({ task, label }: { task: SxCalendarTask; label: string }) {
+  const done = task.status === "completed";
+  return (
+    <Link
+      href={taskHref(task.id)}
+      aria-label={label}
+      title={`${task.title} · ${task.employeeName}`}
+      className={cn(
+        "block truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        done && "bg-status-good/10 text-status-good line-through",
+        !done && !task.overdue && "bg-secondary text-foreground hover:bg-primary/10",
+        task.overdue && "bg-status-critical/10 text-status-critical",
+      )}
+    >
+      {task.title}
+    </Link>
+  );
 }
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-const VIEW_TABS = ["Month", "Week", "Day"] as const;
 
 export default async function CalendarPage() {
   const cookieStore = await cookies();
   const locale = getRequestLocale(() => cookieStore.get(LOCALE_COOKIE_NAME)?.value);
   const { t } = makeTranslator(locale);
   const openTaskPattern = t("table.openTask");
-  const cells = getMonthGrid(YEAR, MONTH);
-  const tasksByDay = new Map<string, typeof tasks>();
-  tasks.forEach((t) => {
-    const key = t.dueDate;
-    if (!tasksByDay.has(key)) tasksByDay.set(key, []);
-    tasksByDay.get(key)!.push(t);
-  });
 
-  const overdue = tasks.filter(
-    (t) => t.status !== "done" && new Date(t.dueDate) < new Date(),
-  ).length;
-  const upcoming = tasks.filter((t) => t.status !== "done").length;
+  const dataset = await getSxViewDataset();
+  const todayKey = vnTodayKey();
+  const cal = buildSxCalendar(dataset, todayKey);
 
   return (
     <div className="space-y-10 animate-fade-in">
       <PageHeader
-        eyebrow={`Tháng ${MONTH + 1}/${YEAR} · ${upcoming} deadline đang theo dõi`}
+        eyebrow={`Tháng ${cal.month}/${cal.year} · ${cal.openCount} deadline đang theo dõi`}
         title="Lịch công việc"
-        description={`${overdue} công việc đã trễ hạn — xử lý trước. Rê chuột lên từng công việc để xem người phụ trách.`}
-        actions={
-          <div className="flex items-center gap-1 rounded-md border border-border bg-card p-0.5">
-            {VIEW_TABS.map((tab, i) => (
-              <button
-                key={tab}
-                className={cn(
-                  "rounded px-2.5 py-1 text-xs font-medium transition-colors",
-                  i === 0
-                    ? "bg-secondary text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+        description={
+          dataset.sourceNote ??
+          `${cal.overdueCount} công việc đã trễ hạn — xử lý trước. Dữ liệu từ Microsoft Planner; rê chuột lên từng công việc để xem người phụ trách.`
         }
+        actions={null}
       />
 
       <Card className="animate-fade-up opacity-0" style={{ animationDelay: "80ms" }}>
         <CardHeader>
           <div className="flex items-end justify-between gap-3">
             <CardTitle className="font-display text-xl font-normal tracking-tight">
-              {MONTH_NAME} {YEAR}
+              Tháng {cal.month} {cal.year}
             </CardTitle>
-            <JumpToTodayButton
-              targetId="cal-today"
-              todayLabel={TODAY.toLocaleString("en-US", { month: "short", day: "numeric" })}
-            />
+            <JumpToTodayButton targetId="cal-today" todayLabel={`${todayKey.slice(8, 10)}/${todayKey.slice(5, 7)}`} />
           </div>
         </CardHeader>
         <CardContent>
@@ -101,69 +98,43 @@ export default async function CalendarPage() {
                 {d}
               </div>
             ))}
-            {cells.map((date, idx) => {
-              if (!date) {
-                return <div key={idx} className="bg-card/30 h-32" aria-hidden />;
-              }
-              const key = date.toISOString().slice(0, 10);
-              const dayTasks = tasksByDay.get(key) ?? [];
-              const isToday = date.toDateString() === TODAY.toDateString();
-              const hasOverdue = dayTasks.some(
-                (t) => t.status !== "done" && new Date(t.dueDate) < new Date(),
-              );
+            {cal.cells.map((cell, idx) => {
+              if (!cell) return <div key={idx} className="bg-card/30 h-32" aria-hidden />;
               return (
                 <div
-                  key={idx}
-                  id={isToday ? "cal-today" : undefined}
+                  key={cell.key}
+                  id={cell.isToday ? "cal-today" : undefined}
                   className={cn(
                     "bg-card p-1.5 h-32 overflow-hidden flex flex-col gap-1 transition-colors scroll-mt-20",
-                    isToday && "ring-2 ring-primary ring-inset",
+                    cell.isToday && "ring-2 ring-primary ring-inset",
                   )}
                 >
                   <div className="flex items-center justify-between">
                     <span
                       className={cn(
                         "font-display text-[15px] font-normal leading-none tabular-nums",
-                        isToday ? "text-primary" : "text-foreground",
+                        cell.isToday ? "text-primary" : "text-foreground",
                       )}
                     >
-                      {date.getDate()}
+                      {cell.day}
                     </span>
-                    {dayTasks.length > 0 && (
+                    {cell.tasks.length > 0 && (
                       <span className="rounded bg-secondary px-1 text-[10px] font-mono tabular-nums text-muted-foreground">
-                        {dayTasks.length}
+                        {cell.tasks.length}
                       </span>
                     )}
                   </div>
                   <div className="space-y-0.5 overflow-hidden">
-                    {dayTasks.slice(0, 3).map((t) => {
-                      const overdueItem = t.status !== "done" && new Date(t.dueDate) < new Date();
-                      return (
-                        <Link
-                          key={t.id}
-                          href={`/tasks?task=${t.id}`}
-                          aria-label={interpolate(openTaskPattern, { title: t.title })}
-                          className={cn(
-                            "block truncate rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                            t.status === "done" && "bg-status-good/10 text-status-good line-through",
-                            t.status !== "done" && !overdueItem && "bg-secondary text-foreground hover:bg-primary/10",
-                            overdueItem && "bg-status-critical/10 text-status-critical",
-                          )}
-                        >
-                          {t.title}
-                        </Link>
-                      );
-                    })}
-                    {dayTasks.length > 3 && (
-                      <Link
-                        href={`/tasks?due=${key}`}
-                        className="font-mono text-[10px] tabular-nums text-muted-foreground hover:text-foreground truncate whitespace-nowrap"
-                      >
-                        +{dayTasks.length - 3} more
-                      </Link>
+                    {cell.tasks.slice(0, MAX_PER_DAY).map((task) => (
+                      <DayTask key={task.id} task={task} label={interpolate(openTaskPattern, { title: task.title })} />
+                    ))}
+                    {cell.tasks.length > MAX_PER_DAY && (
+                      <span className="font-mono text-[10px] tabular-nums text-muted-foreground truncate whitespace-nowrap">
+                        +{cell.tasks.length - MAX_PER_DAY} việc khác
+                      </span>
                     )}
                   </div>
-                  {hasOverdue && (
+                  {cell.hasOverdue && (
                     <div className="mt-auto">
                       <Dot tone="critical" />
                     </div>
@@ -178,51 +149,48 @@ export default async function CalendarPage() {
       <Card className="animate-fade-up opacity-0" style={{ animationDelay: "160ms" }}>
         <CardHeader>
           <div className="flex items-end justify-between gap-3">
-            <CardTitle className="font-display text-xl font-normal tracking-tight">
-              Upcoming this month
-            </CardTitle>
+            <CardTitle className="font-display text-xl font-normal tracking-tight">Sắp đến hạn</CardTitle>
             <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              next 8
+              {cal.upcoming.length} việc gần nhất
             </span>
           </div>
         </CardHeader>
         <CardContent className="divide-y divide-border">
-          {tasks
-            .filter((t) => t.status !== "done")
-            .slice(0, 8)
-            .map((t) => {
-              const assignee = findUser(t.assigneeId);
-              const project = findProject(t.projectId);
-              return (
-                <div
-                  key={t.id}
-                  className="flex items-center gap-4 py-3 first:pt-0 last:pb-0"
-                >
-                  <div className="w-14 shrink-0 flex flex-col items-center justify-center rounded-md bg-secondary/60 py-1.5">
-                    <span className="font-mono text-[10px] font-medium uppercase tracking-wider tabular-nums whitespace-nowrap text-muted-foreground">
-                      {new Date(t.dueDate).toLocaleString("en-US", { month: "short" })}
-                    </span>
-                    <span className="font-display text-[20px] font-normal leading-none tabular-nums text-foreground">
-                      {new Date(t.dueDate).getDate()}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-medium">{t.title}</p>
-                    <p className="text-[12px] text-muted-foreground">
-                      {project?.name} · {assignee?.name.split(" ").slice(-1)[0]}
-                    </p>
-                  </div>
-                  <Badge tone={priorityTone[t.priority]} size="sm">
-                    {priorityLabel[t.priority]}
-                  </Badge>
-                  <Badge tone={statusTone[t.status]} size="sm">
-                    {statusLabel[t.status]}
-                  </Badge>
-                </div>
-              );
-            })}
+          {cal.upcoming.length === 0 && (
+            <p className="py-6 text-sm text-muted-foreground">Không có công việc nào sắp đến hạn.</p>
+          )}
+          {cal.upcoming.map((task) => (
+            <Link
+              key={task.id}
+              href={taskHref(task.id)}
+              className="flex items-center gap-4 py-3 first:pt-0 last:pb-0 hover:bg-secondary/30 rounded-md"
+            >
+              <div className="w-14 shrink-0 flex flex-col items-center justify-center rounded-md bg-secondary/60 py-1.5">
+                <span className="font-mono text-[10px] font-medium uppercase tracking-wider tabular-nums whitespace-nowrap text-muted-foreground">
+                  Th{Number(task.deadline.slice(5, 7))}
+                </span>
+                <span className="font-display text-[20px] font-normal leading-none tabular-nums text-foreground">
+                  {Number(task.deadline.slice(8, 10))}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-sm font-medium">{task.title}</p>
+                <p className="text-[12px] text-muted-foreground">
+                  {task.projectName} · {task.employeeName}
+                </p>
+              </div>
+              <Badge tone={PRIORITY[task.priority].tone} size="sm">
+                {PRIORITY[task.priority].label}
+              </Badge>
+              <Badge tone={STATUS[task.status].tone} size="sm">
+                {STATUS[task.status].label}
+              </Badge>
+            </Link>
+          ))}
         </CardContent>
       </Card>
     </div>
   );
 }
+
+export const dynamic = "force-dynamic";

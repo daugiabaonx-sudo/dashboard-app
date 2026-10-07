@@ -1,13 +1,15 @@
-// "Nhân viên" — SUNEXT template employee cards (sidebar.js#buildEmployeesView).
-// Cards link to the member detail page.
+// "Nhân viên" — SUNEXT template employee cards (sidebar.js#buildEmployeesView),
+// built from Microsoft Planner task assignees.
 
 import type { Metadata } from "next";
 import { SxEmployeesView } from "@/components/sunext/sx-employees-view";
-import { getSxPageData } from "@/lib/sx-page-data";
+import { getSxViewDataset } from "@/lib/sx-view-dataset";
 
 export const metadata: Metadata = { title: "Nhân viên · SUNEXT Dashboard" };
 
-export default function TeamPage() {
-  const { dataset } = getSxPageData();
+export default async function TeamPage() {
+  const dataset = await getSxViewDataset();
   return <SxEmployeesView dataset={dataset} />;
 }
+
+export const dynamic = "force-dynamic";

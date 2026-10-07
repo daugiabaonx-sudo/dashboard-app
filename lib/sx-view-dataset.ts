@@ -1,24 +1,40 @@
 // lib/sx-view-dataset.ts
-// Dataset for the Projects / Tasks template views: real Microsoft Planner
-// data when MS_* credentials are configured, otherwise the in-app dataset.
-// If Planner fails, falls back to the in-app dataset with a visible note
-// instead of breaking the page.
+// Dataset for every dashboard page: real Microsoft Planner data only.
+// When Planner is not configured or fails to load, pages get an EMPTY
+// dataset plus a visible note — never the in-app demo data.
 
 import "server-only";
 import { error as logError } from "@/lib/logger";
 import { isPlannerConfigured } from "@/lib/planner/config";
 import { loadPlannerDataset } from "@/lib/planner/planner-dataset";
 import type { SxDataset } from "@/lib/sx-dashboard";
-import { getSxPageData } from "@/lib/sx-page-data";
 
-const FALLBACK_NOTE = "Không tải được dữ liệu Microsoft Planner — đang hiển thị dữ liệu mẫu.";
+const NOT_CONFIGURED_NOTE =
+  "Chưa cấu hình Microsoft Planner (MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET) — chưa có dữ liệu để hiển thị.";
+const FAILED_NOTE = "Không tải được dữ liệu Microsoft Planner — vui lòng tải lại trang sau ít phút.";
+
+/** A Planner dataset with no records, carrying a note for the page header. */
+export function emptyPlannerDataset(note: string): SxDataset {
+  return {
+    source: "planner",
+    employees: [],
+    projects: [],
+    tasks: [],
+    blockers: [],
+    projectHealth: [],
+    notifications: [],
+    projectLinks: {},
+    taskEtags: {},
+    sourceNote: note,
+  };
+}
 
 export async function getSxViewDataset(): Promise<SxDataset> {
-  if (!isPlannerConfigured()) return getSxPageData().dataset;
+  if (!isPlannerConfigured()) return emptyPlannerDataset(NOT_CONFIGURED_NOTE);
   try {
     return await loadPlannerDataset();
   } catch (e: unknown) {
     logError("planner.dataset_failed", { detail: e instanceof Error ? e.message : String(e) });
-    return { ...getSxPageData().dataset, sourceNote: FALLBACK_NOTE };
+    return emptyPlannerDataset(FAILED_NOTE);
   }
 }

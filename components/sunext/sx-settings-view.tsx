@@ -1,13 +1,12 @@
 "use client";
 
-// "Cài đặt" view — port of sidebar.js#buildSettingsView: reset demo data,
-// profile info, system info.
+// "Cài đặt" view — port of sidebar.js#buildSettingsView: profile info and
+// system info (data source). The template's "reset demo data" section is
+// gone: every page shows Microsoft Planner data only.
 
-import { Info, RotateCcw, User } from "lucide-react";
+import { Info, User } from "lucide-react";
 import type { ReactNode } from "react";
-import { useSxShell } from "./sx-shell-context";
 import { SxPageHero, SxPageView } from "./sx-page-view";
-import { clearSxTaskOverrides } from "./use-sx-task-store";
 
 export interface SxSettingsInfo {
   name: string;
@@ -66,42 +65,10 @@ function Section({
 }
 
 export function SxSettingsView({ info }: { info: SxSettingsInfo }) {
-  const { showToast } = useSxShell();
-
-  function onReset() {
-    clearSxTaskOverrides();
-    showToast("Đã khôi phục dữ liệu demo thành công!", "success");
-  }
-
   return (
     <SxPageView>
       <SxPageHero title="Cài đặt" subtitle="Quản lý cài đặt hệ thống" />
       <div style={{ display: "grid", gap: 14, maxWidth: 560 }}>
-        <Section icon={<RotateCcw />} tone="orange" title="Reset dữ liệu demo" hint="Khôi phục toàn bộ dữ liệu về trạng thái ban đầu.">
-          <button
-            type="button"
-            id="resetDemoBtn"
-            className="sx-reset-btn"
-            onClick={onReset}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "10px 20px",
-              border: "1px solid rgba(255,138,53,.28)",
-              borderRadius: 10,
-              color: "#ffac62",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              transition: "all .2s ease",
-            }}
-          >
-            <RotateCcw width={16} height={16} />
-            Reset demo data
-          </button>
-        </Section>
-
         <Section icon={<User />} tone="purple" title="Hồ sơ" hint="Thông tin tài khoản của bạn.">
           <div style={{ display: "grid", gap: 8 }}>
             <Row label="Tên" value={info.name} />

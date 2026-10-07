@@ -118,7 +118,7 @@ function useCharacterMorph(): MorphChar[] {
   return chars;
 }
 
-export function SxHero({ name }: { name: string }) {
+export function SxHero({ name, note }: { name: string; note?: string }) {
   const wordsRef = useRef([`${name} 👋`, "Manager Dashboard", `${name} 👋`]);
   const typed = useTypewriter(wordsRef.current);
   const morph = useCharacterMorph();
@@ -135,7 +135,7 @@ export function SxHero({ name }: { name: string }) {
           </span>
           <span className="tw-cursor" aria-hidden="true" />
         </h1>
-        <p>Cùng xem tình hình công việc của team trong tuần này nhé!</p>
+        <p role={note ? "status" : undefined}>{note ?? "Cùng xem tình hình công việc của team trong tuần này nhé!"}</p>
       </div>
       <div className="hero-date">
         <div id="todayText" suppressHydrationWarning>

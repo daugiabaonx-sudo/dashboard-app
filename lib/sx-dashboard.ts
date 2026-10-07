@@ -45,6 +45,10 @@ export interface SxTask {
   /** YYYY-MM-DD */
   deadline: string;
   notes: string;
+  /** YYYY-MM-DD the task was created (Planner only). */
+  createdAt?: string;
+  /** YYYY-MM-DD the task was completed (Planner only). */
+  completedAt?: string;
 }
 
 export interface SxBlocker {

@@ -37,7 +37,7 @@ export function SxOverview({ dataset, profileName }: Props) {
 
   return (
     <>
-      <SxHero name={profileName} />
+      <SxHero name={profileName} note={dataset.sourceNote} />
       <SxStatsGrid kpis={kpis} />
 
       <section className="dashboard-grid reveal delay-2">

@@ -1,6 +1,7 @@
 // tests/unit/sx-view-dataset.test.ts
-// Projects / Tasks pages pick Planner data when configured, mock otherwise,
-// and fall back to mock (with a visible note) when Planner fails.
+// Every dashboard page shows Microsoft Planner data only: when Planner is not
+// configured or fails, pages get an EMPTY dataset plus a visible note —
+// never the in-app demo data.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,7 +12,7 @@ vi.mock("@/lib/logger", () => ({ error: vi.fn() }));
 import { isPlannerConfigured } from "@/lib/planner/config";
 import { loadPlannerDataset } from "@/lib/planner/planner-dataset";
 import { error as logError } from "@/lib/logger";
-import { getSxViewDataset } from "@/lib/sx-view-dataset";
+import { emptyPlannerDataset, getSxViewDataset } from "@/lib/sx-view-dataset";
 
 const PLANNER_DS = {
   source: "planner" as const,
@@ -23,14 +24,36 @@ const PLANNER_DS = {
   notifications: [],
 };
 
+function expectEmpty(ds: Awaited<ReturnType<typeof getSxViewDataset>>) {
+  expect(ds.source).toBe("planner");
+  expect(ds.employees).toEqual([]);
+  expect(ds.projects).toEqual([]);
+  expect(ds.tasks).toEqual([]);
+  expect(ds.blockers).toEqual([]);
+  expect(ds.projectHealth).toEqual([]);
+  expect(ds.notifications).toEqual([]);
+}
+
 beforeEach(() => vi.clearAllMocks());
 
+describe("emptyPlannerDataset", () => {
+  it("has no records, the Planner source and the given note", () => {
+    const ds = emptyPlannerDataset("note");
+    expectEmpty(ds);
+    expect(ds.sourceNote).toBe("note");
+  });
+
+  it("returns a fresh object every call", () => {
+    expect(emptyPlannerDataset("a")).not.toBe(emptyPlannerDataset("a"));
+  });
+});
+
 describe("getSxViewDataset", () => {
-  it("uses the mock dataset when Planner is not configured", async () => {
+  it("returns an empty dataset with a setup note when Planner is not configured", async () => {
     vi.mocked(isPlannerConfigured).mockReturnValue(false);
     const ds = await getSxViewDataset();
-    expect(ds.source).toBeUndefined();
-    expect(ds.tasks.length).toBeGreaterThan(0);
+    expectEmpty(ds);
+    expect(ds.sourceNote).toMatch(/Chưa cấu hình Microsoft Planner/);
     expect(loadPlannerDataset).not.toHaveBeenCalled();
   });
 
@@ -40,12 +63,13 @@ describe("getSxViewDataset", () => {
     expect(await getSxViewDataset()).toBe(PLANNER_DS);
   });
 
-  it("falls back to mock with a note and logs when Planner fails", async () => {
+  it("returns an empty dataset with an error note (no demo data) and logs when Planner fails", async () => {
     vi.mocked(isPlannerConfigured).mockReturnValue(true);
     vi.mocked(loadPlannerDataset).mockRejectedValue(new Error("boom"));
     const ds = await getSxViewDataset();
-    expect(ds.source).toBeUndefined();
-    expect(ds.sourceNote).toMatch(/Planner/);
+    expectEmpty(ds);
+    expect(ds.sourceNote).toMatch(/Không tải được dữ liệu Microsoft Planner/);
+    expect(ds.sourceNote).not.toMatch(/mẫu/);
     expect(logError).toHaveBeenCalledWith("planner.dataset_failed", expect.objectContaining({ detail: "boom" }));
   });
 });

@@ -75,6 +75,8 @@ export function mapPlannerTask(task: PlannerTask, now: number): SxTask {
     progress: clampPct(task.percentComplete),
     deadline: task.dueDateTime ? vnDay(task.dueDateTime) : "",
     notes: "",
+    ...(task.createdDateTime ? { createdAt: vnDay(task.createdDateTime) } : {}),
+    ...(task.completedDateTime ? { completedAt: vnDay(task.completedDateTime) } : {}),
   };
 }
 
