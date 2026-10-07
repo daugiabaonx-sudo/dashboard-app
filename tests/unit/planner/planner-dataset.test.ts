@@ -12,10 +12,11 @@ vi.mock("@/lib/planner/planner-api", async (importOriginal) => ({
   listAllPlans: vi.fn(),
   listPlanTasks: vi.fn(),
   listGroupMembers: vi.fn(),
+  getUsersByIds: vi.fn(),
 }));
 
 import { GraphError } from "@/lib/planner/errors";
-import { listAllPlans, listGroupMembers, listPlanTasks } from "@/lib/planner/planner-api";
+import { getUsersByIds, listAllPlans, listGroupMembers, listPlanTasks } from "@/lib/planner/planner-api";
 import {
   invalidatePlannerSource,
   loadPlannerDataset,
@@ -86,6 +87,35 @@ describe("loadPlannerSource", () => {
   it("propagates other task-loading failures", async () => {
     vi.mocked(listPlanTasks).mockRejectedValue(new GraphError("bad", 400, "BadRequest"));
     await expect(loadPlannerSource()).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("does not look up users when every assignee is a group member", async () => {
+    vi.mocked(listPlanTasks).mockImplementation(async (planId: string) => [
+      { ...plannerTask(`t-${planId}`, planId), assignments: { u1: {} } },
+    ]);
+    const src = await loadPlannerSource();
+    expect(getUsersByIds).not.toHaveBeenCalled();
+    expect(src.users).toEqual([]);
+  });
+
+  it("looks up assignees that are not members of any plan group", async () => {
+    vi.mocked(listPlanTasks).mockImplementation(async (planId: string) => [
+      { ...plannerTask(`t-${planId}`, planId), assignments: { u1: {}, guest: {} } },
+    ]);
+    vi.mocked(getUsersByIds).mockResolvedValue([{ id: "guest", displayName: "Khách", jobTitle: null, department: null }]);
+    const src = await loadPlannerSource();
+    expect(getUsersByIds).toHaveBeenCalledWith(["guest"]);
+    expect(src.users).toEqual([{ id: "guest", displayName: "Khách", jobTitle: null, department: null }]);
+  });
+
+  it("ignores a failed user lookup (e.g. User.Read.All not granted)", async () => {
+    vi.mocked(listPlanTasks).mockImplementation(async (planId: string) => [
+      { ...plannerTask(`t-${planId}`, planId), assignments: { guest: {} } },
+    ]);
+    vi.mocked(getUsersByIds).mockRejectedValue(new GraphError("no", 403, "Authorization_RequestDenied"));
+    const src = await loadPlannerSource();
+    expect(src.users).toEqual([]);
+    expect(src.tasks).toHaveLength(3);
   });
 });
 

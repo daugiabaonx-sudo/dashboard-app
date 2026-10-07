@@ -3,6 +3,7 @@
 // signed-in session and the Microsoft Planner dataset only.
 
 import type { SxShellProps } from "@/components/sunext/sx-shell";
+import { canEditPlanner, roleLabel } from "@/lib/auth/permissions";
 import type { SxDataset } from "@/lib/sx-dashboard";
 
 export type SxShellData = Omit<SxShellProps, "children">;
@@ -23,19 +24,22 @@ function initialsOf(name: string): string {
   return letters.join("").toUpperCase();
 }
 
-function displayName(identity: SxShellIdentity): string {
+/** Session full name, falling back to the e-mail's local part. */
+export function displayName(identity: SxShellIdentity): string {
   return identity.fullName.trim() || identity.email.split("@")[0] || "Người dùng";
 }
 
-export function buildSxShell(identity: SxShellIdentity, dataset: SxDataset): SxShellData {
+/** @param role the user's profile role (lib/auth/role#getUserRole); null = unknown, read-only. */
+export function buildSxShell(identity: SxShellIdentity, dataset: SxDataset, role: string | null): SxShellData {
   const name = displayName(identity);
   const teams = [...new Set(dataset.employees.map((e) => e.team))]
     .filter((team) => team && team !== NO_TEAM)
     .sort((a, b) => a.localeCompare(b, "vi"));
   return {
-    profile: { userId: identity.userId, name, initials: initialsOf(name), roleLabel: "Team Manager" },
+    profile: { userId: identity.userId, name, initials: initialsOf(name), roleLabel: roleLabel(role) },
     notifications: dataset.notifications,
     teams,
     projects: dataset.projects.map((p) => p.name),
+    canEdit: canEditPlanner(role),
   };
 }

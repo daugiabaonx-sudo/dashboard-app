@@ -5,6 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/auth/session", () => ({ requireUser: vi.fn() }));
+vi.mock("@/lib/auth/role", () => ({ getUserRole: vi.fn() }));
 vi.mock("@/lib/planner/token", () => ({ getGraphToken: vi.fn(), readTokenRoles: vi.fn() }));
 vi.mock("@/lib/planner/planner-api", () => ({
   listAllPlans: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock("@/lib/planner/planner-api", () => ({
 vi.mock("@/lib/planner/planner-dataset", () => ({ invalidatePlannerSource: vi.fn() }));
 
 import { requireUser } from "@/lib/auth/session";
+import { getUserRole } from "@/lib/auth/role";
 import { getGraphToken, readTokenRoles } from "@/lib/planner/token";
 import { listAllPlans, listGroupPlans, listPlanBuckets, listPlanTasks, updateTask } from "@/lib/planner/planner-api";
 import { invalidatePlannerSource } from "@/lib/planner/planner-dataset";
@@ -40,6 +42,7 @@ beforeEach(() => {
   vi.unstubAllEnvs();
   vi.clearAllMocks();
   vi.mocked(requireUser).mockResolvedValue(SESSION);
+  vi.mocked(getUserRole).mockResolvedValue("manager");
 });
 
 describe("GET /api/planner/status", () => {
@@ -196,6 +199,22 @@ describe("PATCH /api/planner/tasks/:taskId", () => {
     vi.mocked(updateTask).mockRejectedValue(new PlannerInputError("Patch must change at least one field"));
     const res = await patch({ etag: 'W/"1"', patch: {} });
     expect(res.status).toBe(400);
+  });
+
+  it.each(["owner", "admin", "manager"] as const)("lets a %s edit", async (role) => {
+    vi.mocked(getUserRole).mockResolvedValue(role);
+    vi.mocked(updateTask).mockResolvedValue(updated);
+    const res = await patch({ etag: 'W/"1"', patch: { percentComplete: 100 } });
+    expect(res.status).toBe(200);
+    expect(getUserRole).toHaveBeenCalledWith("u1");
+  });
+
+  it.each([["member"], ["viewer"], [null]] as const)("rejects role %s with 403 without calling Planner", async (role) => {
+    vi.mocked(getUserRole).mockResolvedValue(role);
+    const res = await patch({ etag: 'W/"1"', patch: { percentComplete: 100 } });
+    expect(res.status).toBe(403);
+    expect(res.json).toMatchObject({ code: "forbidden" });
+    expect(updateTask).not.toHaveBeenCalled();
   });
 });
 

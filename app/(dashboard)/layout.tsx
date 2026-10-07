@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
+import { getUserRole } from "@/lib/auth/role";
 import { requireUser } from "@/lib/auth/session";
 import { SxShell } from "@/components/sunext/sx-shell";
 import { buildSxShell } from "@/lib/sx-shell-data";
@@ -17,7 +18,8 @@ export default async function DashboardLayout({
   children: ReactNode;
 }) {
   const session = await requireUser();
-  const shell = buildSxShell(session, await getSxViewDataset());
+  const [dataset, role] = await Promise.all([getSxViewDataset(), getUserRole(session.userId)]);
+  const shell = buildSxShell(session, dataset, role);
   return (
     <>
       <SxShell {...shell}>{children}</SxShell>

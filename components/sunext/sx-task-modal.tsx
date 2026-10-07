@@ -29,7 +29,11 @@ interface Props {
   saving?: boolean;
   /** False for Microsoft Planner tasks — their notes are not synced. */
   notesEnabled?: boolean;
+  /** View-only (user lacks Owner / Admin / Manager role): no inputs, no save. */
+  readOnly?: boolean;
 }
+
+const READ_ONLY_NOTE = "Bạn chỉ có quyền xem. Chỉ Owner, Admin hoặc Manager được sửa công việc trên Microsoft Planner.";
 
 export function SxTaskModal({
   task,
@@ -40,6 +44,7 @@ export function SxTaskModal({
   onSave,
   saving = false,
   notesEnabled = true,
+  readOnly = false,
 }: Props) {
   const [form, setForm] = useState<SxTaskEdit>({ status: "in_progress", priority: "medium", progress: 0, notes: "", deadline: "" });
   const [fillWidth, setFillWidth] = useState(0);
@@ -136,6 +141,7 @@ export function SxTaskModal({
               max={100}
               step={1}
               value={form.progress}
+              disabled={readOnly}
               aria-label="Chỉnh tiến độ"
               onChange={(e) => setProgress(Number(e.target.value))}
             />
@@ -145,7 +151,7 @@ export function SxTaskModal({
             <div className="modal-edit-row">
               <div>
                 <label htmlFor="modalStatusSelect">Trạng thái</label>
-                <select id="modalStatusSelect" className="modal-select" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as SxStatus }))}>
+                <select id="modalStatusSelect" className="modal-select" disabled={readOnly} value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as SxStatus }))}>
                   <option value="not_started">Chưa bắt đầu</option>
                   <option value="in_progress">Đang làm</option>
                   <option value="completed">Hoàn thành</option>
@@ -155,7 +161,7 @@ export function SxTaskModal({
               </div>
               <div>
                 <label htmlFor="modalPrioritySelect">Ưu tiên</label>
-                <select id="modalPrioritySelect" className="modal-select" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as SxPriority }))}>
+                <select id="modalPrioritySelect" className="modal-select" disabled={readOnly} value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as SxPriority }))}>
                   <option value="high">Cao</option>
                   <option value="medium">Trung bình</option>
                   <option value="low">Thấp</option>
@@ -169,12 +175,17 @@ export function SxTaskModal({
                 type="date"
                 id="modalDeadlineInput"
                 className="modal-select"
+                disabled={readOnly}
                 value={form.deadline ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
               />
             </div>
 
-            {notesEnabled ? (
+            {readOnly ? (
+              <p role="note" style={{ margin: 0, fontSize: 11, color: "#ffac62" }}>
+                {READ_ONLY_NOTE}
+              </p>
+            ) : notesEnabled ? (
               <div>
                 <label htmlFor="modalNotes">Ghi chú</label>
                 <textarea id="modalNotes" className="modal-textarea" placeholder="Thêm ghi chú..." value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
@@ -185,17 +196,19 @@ export function SxTaskModal({
               </p>
             )}
 
-            <button
-              id="modalSaveBtn"
-              className="modal-save-btn"
-              disabled={saving}
-              aria-busy={saving}
-              style={saving ? { opacity: 0.6, cursor: "wait" } : undefined}
-              onClick={() => task && !saving && onSave(task.id, form)}
-            >
-              <Save />
-              {saving ? "Đang lưu..." : "Lưu thay đổi"}
-            </button>
+            {!readOnly && (
+              <button
+                id="modalSaveBtn"
+                className="modal-save-btn"
+                disabled={saving}
+                aria-busy={saving}
+                style={saving ? { opacity: 0.6, cursor: "wait" } : undefined}
+                onClick={() => task && !saving && onSave(task.id, form)}
+              >
+                <Save />
+                {saving ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            )}
           </div>
         </div>
       </div>

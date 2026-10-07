@@ -25,30 +25,38 @@ const DS: SxDataset = {
 };
 
 describe("buildSxShell", () => {
-  it("builds the profile from the session", () => {
-    const shell = buildSxShell({ userId: "u-9", email: "lan@sunext.vn", fullName: "Trần Thị Lan" }, DS);
-    expect(shell.profile).toEqual({ userId: "u-9", name: "Trần Thị Lan", initials: "TL", roleLabel: "Team Manager" });
+  it("builds the profile from the session and the role", () => {
+    const shell = buildSxShell({ userId: "u-9", email: "lan@sunext.vn", fullName: "Trần Thị Lan" }, DS, "manager");
+    expect(shell.profile).toEqual({ userId: "u-9", name: "Trần Thị Lan", initials: "TL", roleLabel: "Manager" });
+    expect(shell.canEdit).toBe(true);
+  });
+
+  it("is read-only for members and when the role is unknown", () => {
+    const member = buildSxShell({ userId: "u", email: "", fullName: "X" }, DS, "member");
+    expect(member.canEdit).toBe(false);
+    expect(member.profile.roleLabel).toBe("Thành viên");
+    expect(buildSxShell({ userId: "u", email: "", fullName: "X" }, DS, null).canEdit).toBe(false);
   });
 
   it("falls back to the email name when the session has no full name", () => {
-    const shell = buildSxShell({ userId: "u-9", email: "lan@sunext.vn", fullName: "  " }, DS);
+    const shell = buildSxShell({ userId: "u-9", email: "lan@sunext.vn", fullName: "  " }, DS, null);
     expect(shell.profile.name).toBe("lan");
     expect(shell.profile.initials).toBe("L");
   });
 
   it("lists sorted unique teams from Planner, skipping the unassigned placeholder", () => {
-    expect(buildSxShell({ userId: "u", email: "", fullName: "X" }, DS).teams).toEqual(["Bán hàng", "Kỹ thuật"]);
+    expect(buildSxShell({ userId: "u", email: "", fullName: "X" }, DS, null).teams).toEqual(["Bán hàng", "Kỹ thuật"]);
   });
 
   it("lists Planner plan names as projects and passes notifications through", () => {
-    const shell = buildSxShell({ userId: "u", email: "", fullName: "X" }, DS);
+    const shell = buildSxShell({ userId: "u", email: "", fullName: "X" }, DS, null);
     expect(shell.projects).toEqual(["Website", "App"]);
     expect(shell.notifications).toEqual([]);
   });
 
   it("returns empty lists for an empty dataset", () => {
     const empty: SxDataset = { ...DS, employees: [], projects: [] };
-    const shell = buildSxShell({ userId: "u", email: "", fullName: "X" }, empty);
+    const shell = buildSxShell({ userId: "u", email: "", fullName: "X" }, empty, null);
     expect(shell.teams).toEqual([]);
     expect(shell.projects).toEqual([]);
   });

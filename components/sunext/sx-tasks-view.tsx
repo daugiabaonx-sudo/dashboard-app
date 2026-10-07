@@ -9,9 +9,11 @@ import { formatDeadline, type SxDataset } from "@/lib/sx-dashboard";
 import { STATUS_CONFIG } from "./sx-attention-card";
 import { PRIORITY_CONFIG, SxPageHero, SxPageView, SxProgress } from "./sx-page-view";
 import { SxTaskModalHost, useSxTaskStore } from "./use-sx-task-store";
+import { useSxShell } from "./sx-shell-context";
 
 export function SxTasksView({ dataset, focusId }: { dataset: SxDataset; focusId?: string }) {
   const store = useSxTaskStore(dataset);
+  const { canEdit } = useSxShell();
   const { openTask } = store;
   const employees = new Map(dataset.employees.map((e) => [e.id, e]));
   const projects = new Map(dataset.projects.map((p) => [p.id, p]));
@@ -27,7 +29,7 @@ export function SxTasksView({ dataset, focusId }: { dataset: SxDataset; focusId?
         subtitle={
           dataset.sourceNote ??
           (store.isPlanner
-            ? `${store.tasks.length} công việc từ Microsoft Planner · chỉnh sửa sẽ lưu thẳng vào Planner`
+            ? `${store.tasks.length} công việc từ Microsoft Planner · ${canEdit ? "chỉnh sửa sẽ lưu thẳng vào Planner" : "bạn chỉ có quyền xem"}`
             : `${store.tasks.length} công việc trong hệ thống`)
         }
       />

@@ -7,7 +7,7 @@
 import type { Metadata } from "next";
 import { SxOverview } from "@/components/sunext/sx-overview";
 import { requireUser } from "@/lib/auth/session";
-import { buildSxShell } from "@/lib/sx-shell-data";
+import { displayName } from "@/lib/sx-shell-data";
 import { getSxViewDataset } from "@/lib/sx-view-dataset";
 
 export const metadata: Metadata = {
@@ -18,8 +18,7 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const session = await requireUser();
   const dataset = await getSxViewDataset();
-  const { profile } = buildSxShell(session, dataset);
-  return <SxOverview dataset={dataset} profileName={profile.name} />;
+  return <SxOverview dataset={dataset} profileName={displayName(session)} />;
 }
 
 export const dynamic = "force-dynamic";

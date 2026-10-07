@@ -3,6 +3,7 @@
 // Same data source as lib/dashboard-data.ts (in-memory mock in lib/data);
 // when the real Supabase adapter lands, swap the four collections here.
 
+import { canEditPlanner } from "@/lib/auth/permissions";
 import { findUser, notifications, projects, tasks, users } from "@/lib/data";
 import { buildSxDataset, type SxDataset } from "@/lib/sx-dashboard";
 import type { SxShellProps } from "@/components/sunext/sx-shell";
@@ -47,6 +48,7 @@ export function getSxPageData(
     notifications: dataset.notifications,
     teams: [...new Set(dataset.employees.map((e) => e.team))].sort(),
     projects: dataset.projects.map((p) => p.name),
+    canEdit: canEditPlanner(user?.role),
   };
 
   return { dataset, shell };

@@ -15,6 +15,8 @@ export interface SxShellContextValue {
   showToast: (message: string, type?: SxToastType) => void;
   /** Mount point next to `.app` (where the template places its modal). */
   portalEl: HTMLElement | null;
+  /** Owner / Admin / Manager may edit Planner tasks; others are read-only. */
+  canEdit: boolean;
 }
 
 export const SxShellContext = createContext<SxShellContextValue | null>(null);

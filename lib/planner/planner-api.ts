@@ -71,6 +71,43 @@ export function listGroupMembers(groupId: string): Promise<PlannerMember[]> {
   );
 }
 
+/** Graph limit for directoryObjects/getByIds. */
+const GET_BY_IDS_MAX = 1000;
+
+interface DirectoryUser {
+  readonly id: string;
+  readonly displayName?: string | null;
+  readonly jobTitle?: string | null;
+  readonly department?: string | null;
+}
+
+/**
+ * Users by id (needs User.Read.All) — for task assignees whose names the
+ * group member listings don't provide. Invalid ids are dropped.
+ */
+export async function getUsersByIds(ids: readonly string[]): Promise<PlannerMember[]> {
+  const valid = [...new Set(ids)].filter((id) => ID_RE.test(id));
+  const chunks = Array.from({ length: Math.ceil(valid.length / GET_BY_IDS_MAX) }, (_, i) =>
+    valid.slice(i * GET_BY_IDS_MAX, (i + 1) * GET_BY_IDS_MAX),
+  );
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      graphRequest<{ value: DirectoryUser[] }>("/directoryObjects/getByIds", {
+        method: "POST",
+        body: { ids: chunk, types: ["user"] },
+      }),
+    ),
+  );
+  return results.flatMap(({ data }) =>
+    data.value.map((u) => ({
+      id: u.id,
+      displayName: u.displayName ?? null,
+      jobTitle: u.jobTitle ?? null,
+      department: u.department ?? null,
+    })),
+  );
+}
+
 /** A group without Planner (or one the app can't see) is not an error for "all plans". */
 export function isSkippableGroupError(e: unknown): boolean {
   return e instanceof GraphError && (e.status === 403 || e.status === 404);

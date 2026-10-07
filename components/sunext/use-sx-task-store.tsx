@@ -141,7 +141,7 @@ function usePlannerSaver(dataset: SxDataset, showToast: ShowToast, onSaved: () =
 }
 
 export function useSxTaskStore(dataset: SxDataset): SxTaskStore {
-  const { showToast } = useSxShell();
+  const { showToast, canEdit } = useSxShell();
   const isPlanner = dataset.source === "planner";
   const [overrides, setOverrides] = useState<Overrides>({});
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
@@ -171,6 +171,10 @@ export function useSxTaskStore(dataset: SxDataset): SxTaskStore {
   const saveTask = useCallback(
     (id: string, edit: SxTaskEdit) => {
       if (isPlanner) {
+        if (!canEdit) {
+          showToast("Bạn chỉ có quyền xem. Chỉ Owner, Admin hoặc Manager được sửa công việc.", "warning");
+          return;
+        }
         const original = tasks.find((t) => t.id === id);
         if (original) void savePlanner(original, edit);
         return;
@@ -183,7 +187,7 @@ export function useSxTaskStore(dataset: SxDataset): SxTaskStore {
       setOpenTaskId(null);
       showToast("Đã cập nhật công việc thành công!", "success");
     },
-    [isPlanner, tasks, savePlanner, showToast],
+    [isPlanner, canEdit, tasks, savePlanner, showToast],
   );
 
   return {
@@ -200,7 +204,7 @@ export function useSxTaskStore(dataset: SxDataset): SxTaskStore {
 
 /** Renders the template task modal into the shell portal (outside `.app`). */
 export function SxTaskModalHost({ dataset, store }: { dataset: SxDataset; store: SxTaskStore }) {
-  const { portalEl } = useSxShell();
+  const { portalEl, canEdit } = useSxShell();
   if (!portalEl) return null;
   const task = store.openTaskId ? store.tasks.find((t) => t.id === store.openTaskId) ?? null : null;
   return createPortal(
@@ -213,6 +217,7 @@ export function SxTaskModalHost({ dataset, store }: { dataset: SxDataset; store:
       onSave={store.saveTask}
       saving={store.saving}
       notesEnabled={!store.isPlanner}
+      readOnly={store.isPlanner && !canEdit}
     />,
     portalEl,
   );

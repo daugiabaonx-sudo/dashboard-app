@@ -36,6 +36,8 @@ export interface PlannerSource {
   readonly tasks: readonly PlannerTask[];
   /** groupId → members of that Microsoft 365 group. */
   readonly members: Readonly<Record<string, readonly PlannerMember[]>>;
+  /** Assignees looked up by id (User.Read.All) when member lists lack their name. */
+  readonly users?: readonly PlannerMember[];
 }
 
 const dayFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -93,8 +95,10 @@ function initialsOf(name: string): string {
 function buildEmployees(src: PlannerSource, tasks: readonly SxTask[]): SxEmployee[] {
   const groupOfPlan = new Map(src.plans.map((p) => [p.id, p]));
   const memberById = new Map<string, PlannerMember>();
-  for (const list of Object.values(src.members)) {
-    for (const m of list) if (!memberById.has(m.id)) memberById.set(m.id, m);
+  const people = [...Object.values(src.members).flat(), ...(src.users ?? [])];
+  for (const m of people) {
+    const known = memberById.get(m.id);
+    if (!known || (!known.displayName?.trim() && m.displayName?.trim())) memberById.set(m.id, m);
   }
 
   const order: string[] = [];

@@ -11,15 +11,17 @@ import "server-only";
 import type { SxDataset } from "@/lib/sx-dashboard";
 import { mapInBatches } from "./batch";
 import { readPlannerConfig } from "./config";
-import { buildPlannerDataset, type PlannerSource } from "./planner-mapping";
+import { buildPlannerDataset, PLANNER_UNASSIGNED_ID, type PlannerSource } from "./planner-mapping";
 import {
   GROUP_BATCH_SIZE,
+  getUsersByIds,
   isSkippableGroupError,
   listAllPlans,
   listGroupMembers,
   listPlanTasks,
 } from "./planner-api";
-import type { PlannerMember } from "./types";
+import { error as logError } from "@/lib/logger";
+import type { PlannerMember, PlannerTask } from "./types";
 
 const CACHE_TTL_MS = 60_000;
 
@@ -39,6 +41,24 @@ async function membersOf(groupId: string): Promise<readonly PlannerMember[]> {
   }
 }
 
+/** Assignees with no named entry in any group member list. */
+function unnamedAssignees(tasks: readonly PlannerTask[], members: readonly PlannerMember[]): string[] {
+  const named = new Set(members.filter((m) => m.displayName?.trim()).map((m) => m.id));
+  const ids = tasks.flatMap((t) => Object.keys(t.assignments ?? {}));
+  return [...new Set(ids)].filter((id) => id !== PLANNER_UNASSIGNED_ID && !named.has(id));
+}
+
+/** Names are optional: without User.Read.All the lookup fails and is skipped. */
+async function lookupUsers(ids: readonly string[]): Promise<readonly PlannerMember[]> {
+  if (ids.length === 0) return [];
+  try {
+    return await getUsersByIds(ids);
+  } catch (e: unknown) {
+    logError("planner.user_lookup_failed", { detail: e instanceof Error ? e.message : String(e) });
+    return [];
+  }
+}
+
 async function fetchSource(): Promise<PlannerSource> {
   const { tenantId } = readPlannerConfig();
   const plans = await listAllPlans();
@@ -47,11 +67,14 @@ async function fetchSource(): Promise<PlannerSource> {
     mapInBatches(plans, GROUP_BATCH_SIZE, (p) => listPlanTasks(p.id)),
     mapInBatches(groupIds, GROUP_BATCH_SIZE, membersOf),
   ]);
+  const tasks = taskLists.flat();
+  const users = await lookupUsers(unnamedAssignees(tasks, memberLists.flat()));
   return {
     tenantId,
     plans,
-    tasks: taskLists.flat(),
+    tasks,
     members: Object.fromEntries(groupIds.map((g, i) => [g, memberLists[i]])),
+    users,
   };
 }
 

@@ -6,6 +6,8 @@
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { canEditPlanner } from "@/lib/auth/permissions";
+import { getUserRole } from "@/lib/auth/role";
 import { requireUser } from "@/lib/auth/session";
 import { updateTask } from "@/lib/planner/planner-api";
 import { invalidatePlannerSource } from "@/lib/planner/planner-dataset";
@@ -21,7 +23,13 @@ const bodySchema = z.object({
 });
 
 export async function PATCH(request: Request, context: { params: Promise<{ taskId: string }> }) {
-  await requireUser();
+  const session = await requireUser();
+  if (!canEditPlanner(await getUserRole(session.userId))) {
+    return NextResponse.json(
+      { error: "Chỉ Owner, Admin hoặc Manager được sửa công việc trên Microsoft Planner.", code: "forbidden" },
+      { status: 403 },
+    );
+  }
   const { taskId } = await context.params;
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

@@ -26,12 +26,14 @@ export interface SxShellProps {
   notifications: SxNotification[];
   teams: string[];
   projects: string[];
+  /** Owner / Admin / Manager may edit Planner tasks; others are read-only. */
+  canEdit: boolean;
   children: ReactNode;
 }
 
 const SEARCH_DEBOUNCE_MS = 280;
 
-export function SxShell({ profile, notifications, teams, projects, children }: SxShellProps) {
+export function SxShell({ profile, notifications, teams, projects, canEdit, children }: SxShellProps) {
   const pathname = usePathname();
   const [filters, setFilters] = useState<SxFilters>(SX_DEFAULT_FILTERS);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -94,7 +96,7 @@ export function SxShell({ profile, notifications, teams, projects, children }: S
     [showToast],
   );
 
-  const ctx = useMemo(() => ({ filters, showToast, portalEl }), [filters, showToast, portalEl]);
+  const ctx = useMemo(() => ({ filters, showToast, portalEl, canEdit }), [filters, showToast, portalEl, canEdit]);
   const isOverview = sxVariantFor(pathname ?? "") === "overview";
 
   return (

@@ -13,6 +13,7 @@ import {
   deleteTask,
   getPlan,
   getTask,
+  getUsersByIds,
   listAllPlans,
   listGroupPlans,
   listPlanBuckets,
@@ -229,5 +230,34 @@ describe("planner-api writes", () => {
     await deleteTask("t1", 'W/"4"');
     expect(lastCall().init.method).toBe("DELETE");
     expect(lastCall().headers.get("if-match")).toBe('W/"4"');
+  });
+});
+
+describe("getUsersByIds", () => {
+  const U1 = "11111111-1111-1111-1111-111111111111";
+  const U2 = "22222222-2222-2222-2222-222222222222";
+
+  it("posts ids to directoryObjects/getByIds and maps user fields", async () => {
+    fetchMock.mockResolvedValue(
+      json({ value: [{ id: U1, displayName: "Lan", jobTitle: "Dev", department: "Tech", mail: "x" }] }),
+    );
+    const users = await getUsersByIds([U1]);
+    expect(users).toEqual([{ id: U1, displayName: "Lan", jobTitle: "Dev", department: "Tech" }]);
+    const { url, init } = lastCall();
+    expect(url).toBe(`${GRAPH_BASE}/directoryObjects/getByIds`);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({ ids: [U1], types: ["user"] });
+  });
+
+  it("does not call Graph for an empty list and skips invalid ids", async () => {
+    expect(await getUsersByIds([])).toEqual([]);
+    expect(await getUsersByIds(["../etc", "bad id"])).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates ids", async () => {
+    fetchMock.mockResolvedValue(json({ value: [] }));
+    await getUsersByIds([U1, U2, U1]);
+    expect(JSON.parse(String(lastCall().init.body)).ids).toEqual([U1, U2]);
   });
 });

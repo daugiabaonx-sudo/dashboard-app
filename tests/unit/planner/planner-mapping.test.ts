@@ -167,6 +167,16 @@ describe("buildPlannerDataset", () => {
     expect(byId.get(PLANNER_UNASSIGNED_ID)?.name).toBe("Chưa giao");
   });
 
+  it("fills names from looked-up users (User.Read.All) when member lists lack them", () => {
+    const withUsers = buildPlannerDataset(
+      { ...src, users: [{ id: U2, displayName: "Minh Tran", jobTitle: "PM", department: null }] },
+      NOW,
+    );
+    const u2 = withUsers.employees.find((e) => e.id === U2);
+    expect(u2).toMatchObject({ name: "Minh Tran", initials: "MT", role: "PM", team: "Tech" });
+    expect(withUsers.employees.find((e) => e.id === U1)?.name).toBe("Lan Nguyen");
+  });
+
   it("computes per-project health from the tasks", () => {
     const plan1 = ds.projectHealth.find((h) => h.projectId === "plan1");
     expect(plan1).toMatchObject({ tasksDone: 1, tasksTotal: 2, progress: 50, health: "blocked" });
