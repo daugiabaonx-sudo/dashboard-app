@@ -7,7 +7,7 @@ export default function LoginPage() {
   return (
     <AuthCard
       eyebrow="SUNEXT Operations"
-      title="Welcome back"
+      title="Login to Dashboard"
       subtitle="Sign in to manage projects, tasks, and your team."
     >
       <Suspense fallback={null}>

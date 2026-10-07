@@ -2,17 +2,24 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { Mail, UserRound } from "lucide-react";
 import { signUpSchema, type SignUpInput } from "@/lib/schemas/auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  FormError,
+  GlassField,
+  GlassPasswordField,
+  GlassSubmit,
+  glassStyles as styles,
+} from "../glass-field";
 
 export function SignupForm() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
@@ -25,6 +32,7 @@ export function SignupForm() {
 
   async function onSubmit(values: SignUpInput) {
     setSubmitting(true);
+    setFormError(null);
     try {
       const res = await fetch("/api/auth/sign-up", {
         method: "POST",
@@ -33,73 +41,49 @@ export function SignupForm() {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        toast.error(data.error ?? "Sign up failed");
+        setFormError(data.error ?? "Sign up failed");
+        setSubmitting(false);
         return;
       }
-      toast.success("Account created");
       router.push("/");
       router.refresh();
     } catch {
-      toast.error("Network error");
-    } finally {
+      setFormError("Network error — please try again.");
       setSubmitting(false);
     }
   }
 
   return (
-    <form noValidate className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-      <div className="space-y-1.5">
-        <label htmlFor="fullName" className="text-xs uppercase tracking-wider text-muted-foreground">
-          Full name
-        </label>
-        <Input
-          id="fullName"
-          autoComplete="name"
-          {...register("fullName")}
-          aria-invalid={Boolean(errors.fullName)}
-        />
-        {errors.fullName && (
-          <p className="text-xs text-destructive">{errors.fullName.message}</p>
-        )}
-      </div>
-      <div className="space-y-1.5">
-        <label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground">
-          Email
-        </label>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          {...register("email")}
-          aria-invalid={Boolean(errors.email)}
-        />
-        {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
-        )}
-      </div>
-      <div className="space-y-1.5">
-        <label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground">
-          Password
-        </label>
-        <Input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          {...register("password")}
-          aria-invalid={Boolean(errors.password)}
-        />
-        {errors.password && (
-          <p className="text-xs text-destructive">{errors.password.message}</p>
-        )}
-      </div>
-      <Button type="submit" disabled={submitting} className="w-full">
-        {submitting ? "Creating…" : "Create account"}
-      </Button>
-      <p className="text-center text-xs text-muted-foreground">
-        Already have an account?{" "}
-        <a href="/login" className="text-foreground underline-offset-4 hover:underline">
-          Sign in
-        </a>
+    <form noValidate className={styles.form} onSubmit={handleSubmit(onSubmit)}>
+      <GlassField
+        id="fullName"
+        label="Full name"
+        icon={UserRound}
+        autoComplete="name"
+        error={errors.fullName?.message}
+        {...register("fullName")}
+      />
+      <GlassField
+        id="email"
+        label="Email"
+        type="email"
+        icon={Mail}
+        autoComplete="email"
+        inputMode="email"
+        error={errors.email?.message}
+        {...register("email")}
+      />
+      <GlassPasswordField
+        id="password"
+        label="Password"
+        autoComplete="new-password"
+        error={errors.password?.message}
+        {...register("password")}
+      />
+      <FormError message={formError} />
+      <GlassSubmit busy={submitting} label="Create account" busyLabel="Creating…" />
+      <p className={styles.footer}>
+        Already have an account? <Link href="/login">Sign in</Link>
       </p>
     </form>
   );

@@ -1,0 +1,367 @@
+/* app/(auth)/auth-glass.module.css
+ * Glassmorphism auth chrome ported from "Dashboard Sunext/Login Dasboard".
+ * Differences vs the static template:
+ *   - CSS-module scoped (cannot leak into the dashboard shell)
+ *   - floating label driven by :placeholder-shown (forms are noValidate)
+ *   - darker veil + card tint for WCAG-friendly text contrast
+ *   - honours prefers-reduced-motion and scrolls on short screens
+ */
+
+.scene {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: gradient 14s ease infinite;
+}
+
+/* Veil keeps white text readable over the brightest gradient stops. */
+.scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.18), transparent 45%),
+    radial-gradient(circle at 85% 90%, rgba(3, 19, 35, 0.35), transparent 55%),
+    rgba(3, 19, 35, 0.22);
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ---------- floating squares ---------- */
+
+.stage {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+}
+
+.square {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 15px;
+  box-shadow: 0 25px 45px rgba(0, 0, 0, 0.1);
+  animation: float 10s linear infinite;
+  animation-delay: calc(-1s * var(--i));
+  pointer-events: none;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(-20px); }
+  50% { transform: translateY(20px); }
+}
+
+.square:nth-child(1) { width: 100px; height: 100px; top: -15px; right: -45px; }
+.square:nth-child(2) { width: 150px; height: 150px; top: 105px; left: -125px; z-index: 6; }
+.square:nth-child(3) { width: 60px; height: 60px; bottom: 85px; right: -45px; z-index: 6; }
+.square:nth-child(4) { width: 50px; height: 50px; bottom: 35px; left: -95px; }
+.square:nth-child(5) { width: 50px; height: 50px; top: -15px; left: -25px; }
+.square:nth-child(6) { width: 85px; height: 85px; top: 165px; right: -155px; z-index: 6; }
+
+/* ---------- card ---------- */
+
+.card {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  padding: 44px 36px 36px;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 25px 45px rgba(0, 0, 0, 0.22);
+  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 13px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.12), transparent 60%);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+}
+
+.header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.title {
+  margin-top: 8px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  text-shadow: 0 2px 12px rgba(3, 19, 35, 0.25);
+}
+
+.subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- fields ---------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.field {
+  position: relative;
+  margin-bottom: 26px;
+}
+
+.input {
+  width: 100%;
+  height: 48px;
+  padding: 8px 46px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  outline: none;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.input::placeholder {
+  color: transparent;
+}
+
+.input:focus {
+  border-color: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15), 0 0 20px rgba(255, 255, 255, 0.12);
+}
+
+.input[aria-invalid="true"] {
+  border-color: #ffd1d1;
+  box-shadow: 0 0 0 3px rgba(255, 120, 120, 0.25);
+}
+
+/* Autofill would otherwise paint a yellow box over the glass. */
+.input:-webkit-autofill {
+  -webkit-text-fill-color: #fff;
+  transition: background-color 9999s ease-out;
+}
+
+.label {
+  position: absolute;
+  left: 44px;
+  top: 14px;
+  font-size: 14px;
+  color: #fff;
+  pointer-events: none;
+  transition: transform 0.3s ease, font-size 0.3s ease, background 0.3s ease, padding 0.3s ease;
+}
+
+.input:focus ~ .label,
+.input:not(:placeholder-shown) ~ .label,
+.input:-webkit-autofill ~ .label {
+  transform: translate(-30px, -30px);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.icon {
+  position: absolute;
+  left: 16px;
+  top: 15px;
+  width: 18px;
+  height: 18px;
+  color: #fff;
+  pointer-events: none;
+}
+
+.toggle {
+  position: absolute;
+  right: 10px;
+  top: 9px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.toggle:hover {
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+.fieldError {
+  margin-top: 6px;
+  padding-left: 6px;
+  font-size: 12px;
+  color: #ffe1e1;
+}
+
+/* ---------- remember + errors ---------- */
+
+.remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: -6px 0 16px;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember input {
+  width: 16px;
+  height: 16px;
+  accent-color: #23d5ab;
+  cursor: pointer;
+}
+
+.formError {
+  min-height: 22px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  text-align: center;
+  color: #ffe1e1;
+}
+
+/* ---------- submit ---------- */
+
+.submit {
+  position: relative;
+  height: 48px;
+  border: 0;
+  border-radius: 15px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(3, 19, 35, 0.18);
+  transition: transform 0.25s ease, background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.submit:hover:not(:disabled) {
+  color: #fff;
+  background: linear-gradient(115deg, rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.25));
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(3, 19, 35, 0.25);
+}
+
+.submit:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.submit:disabled {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: -3px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- footer links ---------- */
+
+.footer {
+  margin-top: 18px;
+  font-size: 13px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.footer a {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.footer a:hover {
+  text-decoration-color: #fff;
+}
+
+/* ---------- responsive + motion ---------- */
+
+@media (max-width: 600px) {
+  .card { padding: 38px 24px 28px; }
+  .title { font-size: 21px; }
+  .square { z-index: 0 !important; }
+  .square:nth-child(2),
+  .square:nth-child(6) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene,
+  .square,
+  .card,
+  .spinner {
+    animation: none;
+  }
+}

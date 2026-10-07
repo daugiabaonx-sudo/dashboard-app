@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import type { z } from "zod";
 import { createTaskSchema, type CreateTaskInput } from "@/lib/schemas/task";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +54,7 @@ export function NewTaskDialog({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<CreateTaskInput>({
+  } = useForm<z.input<typeof createTaskSchema>, unknown, CreateTaskInput>({
     resolver: zodResolver(createTaskSchema),
     defaultValues: {
       title: "",
