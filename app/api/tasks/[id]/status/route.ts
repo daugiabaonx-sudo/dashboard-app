@@ -6,7 +6,6 @@ import { requireUser } from "@/lib/auth/session";
 import { setTaskStatus } from "@/lib/db/tasks";
 import { taskStatusUpdateSchema } from "@/lib/schemas/task";
 
-export const dynamic = "force-dynamic";
 
 export async function PATCH(
   request: Request,

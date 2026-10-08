@@ -7,7 +7,6 @@ import { requireUser } from "@/lib/auth/session";
 import { deleteTask, updateTask } from "@/lib/db/tasks";
 import { updateTaskSchema } from "@/lib/schemas/task";
 
-export const dynamic = "force-dynamic";
 
 export async function DELETE(
   _request: Request,

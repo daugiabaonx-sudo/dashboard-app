@@ -2,8 +2,22 @@
 // Dataset for every dashboard page: real Microsoft Planner data only.
 // When Planner is not configured or fails to load, pages get an EMPTY
 // dataset plus a visible note — never the in-app demo data.
+//
+// Two dedup layers around `getSxViewDataset` so navigation between
+// dashboard pages is instant:
+//   1. `React.cache(...)` — dedupes calls *within a single request*.
+//      Layout and child page both call this; only the first runs.
+//   2. `'use cache'` + `cacheLife('max')` — dedupes *across requests*
+//      while `cacheComponents` is on. Repeat navigations within the
+//      cache lifetime reuse the prior render result instead of paying
+//      the Planner pipeline again. The inner in-process cache in
+//      lib/planner/planner-dataset.ts (CACHE_TTL_MS) still bounds
+//      bursty in-instance reads, and `invalidatePlannerSource()` is
+//      the primary write path.
 
 import "server-only";
+import { cache } from "react";
+import { cacheLife } from "next/cache";
 import { error as logError } from "@/lib/logger";
 import { isPlannerConfigured } from "@/lib/planner/config";
 import { loadPlannerDataset } from "@/lib/planner/planner-dataset";
@@ -29,7 +43,9 @@ export function emptyPlannerDataset(note: string): SxDataset {
   };
 }
 
-export async function getSxViewDataset(): Promise<SxDataset> {
+export const getSxViewDataset = cache(async (): Promise<SxDataset> => {
+  "use cache";
+  cacheLife("max");
   if (!isPlannerConfigured()) return emptyPlannerDataset(NOT_CONFIGURED_NOTE);
   try {
     return await loadPlannerDataset();
@@ -37,4 +53,4 @@ export async function getSxViewDataset(): Promise<SxDataset> {
     logError("planner.dataset_failed", { detail: e instanceof Error ? e.message : String(e) });
     return emptyPlannerDataset(FAILED_NOTE);
   }
-}
+});

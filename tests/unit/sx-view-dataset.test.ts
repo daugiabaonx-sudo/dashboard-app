@@ -8,6 +8,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/planner/config", () => ({ isPlannerConfigured: vi.fn() }));
 vi.mock("@/lib/planner/planner-dataset", () => ({ loadPlannerDataset: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ error: vi.fn() }));
+// `cacheLife` from next/cache only works inside the Next runtime
+// (process.env.__NEXT_USE_CACHE set). Vitest runs in plain Node, so
+// stub it as a no-op — the real `cacheComponents` config is exercised
+// by `next build` and the dev server, not by unit tests.
+vi.mock("next/cache", () => ({ cacheLife: () => undefined }));
 
 import { isPlannerConfigured } from "@/lib/planner/config";
 import { loadPlannerDataset } from "@/lib/planner/planner-dataset";

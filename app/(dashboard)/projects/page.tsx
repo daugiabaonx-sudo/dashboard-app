@@ -12,5 +12,3 @@ export default async function ProjectsPage() {
   const dataset = await getSxViewDataset();
   return <SxProjectsView dataset={dataset} />;
 }
-
-export const dynamic = "force-dynamic";

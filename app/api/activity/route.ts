@@ -5,7 +5,6 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { listRecentActivity } from "@/lib/db/activity";
 
-export const dynamic = "force-dynamic";
 
 export async function GET() {
   await requireUser();

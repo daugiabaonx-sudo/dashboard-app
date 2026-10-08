@@ -8,7 +8,6 @@ import { requireUser, getCurrentWorkspaceId } from "@/lib/auth/session";
 import { createTask, listTasks, listTasksByStatus } from "@/lib/db/tasks";
 import { createTaskSchema } from "@/lib/schemas/task";
 
-export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   await requireUser();

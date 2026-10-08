@@ -30,5 +30,3 @@ export default async function SettingsPage() {
     />
   );
 }
-
-export const dynamic = "force-dynamic";

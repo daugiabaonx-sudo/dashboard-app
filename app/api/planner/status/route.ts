@@ -11,7 +11,6 @@ import { PlannerConfigError } from "@/lib/planner/errors";
 import { plannerErrorResponse } from "@/lib/planner/route-errors";
 import { getGraphToken, readTokenRoles } from "@/lib/planner/token";
 
-export const dynamic = "force-dynamic";
 
 const READ_ROLES = ["Tasks.Read.All", "Tasks.ReadWrite.All"];
 

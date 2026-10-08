@@ -5,7 +5,6 @@ import { NextResponse } from "next/server";
 import { requireUser, getCurrentWorkspaceId } from "@/lib/auth/session";
 import { getKpis } from "@/lib/db/stats";
 
-export const dynamic = "force-dynamic";
 
 export async function GET() {
   await requireUser();

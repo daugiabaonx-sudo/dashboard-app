@@ -37,6 +37,13 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  // Next 16 collapsed `experimental.ppr` + `force-dynamic` into a single
+  // opt-in flag (`cacheComponents`). When on, server components can opt
+  // into request-scoped React.cache + cross-request 'use cache' with
+  // cacheLife(), and `<Suspense>` boundaries stream the rest of the tree
+  // to the client as soon as their fallback is ready. See
+  // node_modules/next/dist/docs/01-app/02-guides/migrating-to-cache-components.md.
+  cacheComponents: true,
   // Next 16 blocks cross-origin requests to dev resources (`/_next/hmr`,
   // etc.) by default. Playwright hits the dev server over `127.0.0.1` while
   // Next binds `localhost`; without this, HMR's WebSocket is rejected and

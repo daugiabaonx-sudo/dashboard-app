@@ -23,7 +23,7 @@ import {
 import { error as logError } from "@/lib/logger";
 import type { PlannerMember, PlannerTask } from "./types";
 
-const CACHE_TTL_MS = 60_000;
+const CACHE_TTL_MS = 120_000;
 
 let cached: { readonly at: number; readonly source: PlannerSource } | null = null;
 let inflight: Promise<PlannerSource> | null = null;

@@ -20,5 +20,3 @@ export default async function DashboardPage() {
   const dataset = await getSxViewDataset();
   return <SxOverview dataset={dataset} profileName={displayName(session)} />;
 }
-
-export const dynamic = "force-dynamic";

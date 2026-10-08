@@ -7,7 +7,6 @@ import { listProjects, createProject } from "@/lib/db/projects";
 import { requireUser, getCurrentWorkspaceId } from "@/lib/auth/session";
 import { createProjectSchema } from "@/lib/schemas/project";
 
-export const dynamic = "force-dynamic";
 
 export async function GET() {
   await requireUser();

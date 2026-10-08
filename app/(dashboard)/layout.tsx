@@ -1,31 +1,31 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { Toaster } from "sonner";
-import { getUserRole } from "@/lib/auth/role";
-import { requireUser } from "@/lib/auth/session";
-import { SxShell } from "@/components/sunext/sx-shell";
-import { buildSxShell } from "@/lib/sx-shell-data";
-import { getSxViewDataset } from "@/lib/sx-view-dataset";
+import { DashboardShellLoader, DashboardShellLoaderFallback } from "./_components/dashboard-shell-loader";
 
 // Every dashboard route shares the SUNEXT template shell (sidebar + topbar).
 // Template views render in its one-screen `.content`; legacy pages (reports,
 // calendar, detail pages) render in a scrollable dark wrapper — see
 // components/sunext/sx-shell.tsx.
-// Sidebar teams / projects come from Microsoft Planner (cached 60s in
-// lib/planner/planner-dataset.ts, so pages reuse the same load).
-export default async function DashboardLayout({
+//
+// With `cacheComponents: true` in next.config.ts, the layout must not call
+// runtime APIs (`cookies()`, `headers()`, ...) directly — that would block
+// prerendering of the whole tree. `requireUser()` (which reads cookies)
+// lives inside DashboardShellLoader, which is itself wrapped in a
+// <Suspense> boundary below. The layout stays a static shell so the
+// sidebar + topbar + children prerender; the data-driven shell streams
+// in when the cached dataset resolves.
+export default function DashboardLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const session = await requireUser();
-  const [dataset, role] = await Promise.all([getSxViewDataset(), getUserRole(session.userId)]);
-  const shell = buildSxShell(session, dataset, role);
   return (
     <>
-      <SxShell {...shell}>{children}</SxShell>
+      <Suspense fallback={<DashboardShellLoaderFallback />}>
+        <DashboardShellLoader>{children}</DashboardShellLoader>
+      </Suspense>
       <Toaster richColors theme="dark" position="top-right" />
     </>
   );
 }
-
-export const dynamic = "force-dynamic";

@@ -11,5 +11,3 @@ export default async function TeamPage() {
   const dataset = await getSxViewDataset();
   return <SxEmployeesView dataset={dataset} />;
 }
-
-export const dynamic = "force-dynamic";

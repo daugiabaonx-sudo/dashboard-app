@@ -7,7 +7,6 @@ import { getProject, updateProject } from "@/lib/db/projects";
 import { updateProjectSchema } from "@/lib/schemas/project";
 import { requireUser } from "@/lib/auth/session";
 
-export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: Request,

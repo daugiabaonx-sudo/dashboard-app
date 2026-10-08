@@ -6,7 +6,6 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { listNotifications, markAllRead } from "@/lib/db/notifications";
 
-export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await requireUser();

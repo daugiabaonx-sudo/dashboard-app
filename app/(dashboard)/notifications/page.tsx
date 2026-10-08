@@ -13,5 +13,3 @@ export default async function NotificationsPage() {
   const dataset = await getSxViewDataset();
   return <SxNotificationsView notifications={dataset.notifications} />;
 }
-
-export const dynamic = "force-dynamic";

@@ -7,7 +7,6 @@ import { signUpSchema } from "@/lib/schemas/auth";
 import { setSignedInUserId } from "@/lib/supabase/mock";
 import { isMockMode } from "@/lib/supabase/env";
 
-export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   let body: unknown;

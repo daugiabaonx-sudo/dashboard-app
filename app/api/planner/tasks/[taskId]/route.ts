@@ -15,7 +15,6 @@ import { mapPlannerTask } from "@/lib/planner/planner-mapping";
 import { plannerErrorResponse } from "@/lib/planner/route-errors";
 import type { PlannerTaskPatch } from "@/lib/planner/types";
 
-export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   etag: z.string().min(1).max(512),

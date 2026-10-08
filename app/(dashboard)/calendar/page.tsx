@@ -4,6 +4,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, Dot } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/page-header";
@@ -58,6 +59,10 @@ function DayTask({ task, label }: { task: SxCalendarTask; label: string }) {
 }
 
 export default async function CalendarPage() {
+  // Opt into request-time rendering: `vnTodayKey()` reads `Date.now()`
+  // which is unstable across renders; under `cacheComponents` the
+  // page-level shell still prerenders, only the body runs per request.
+  await connection();
   const cookieStore = await cookies();
   const locale = getRequestLocale(() => cookieStore.get(LOCALE_COOKIE_NAME)?.value);
   const { t } = makeTranslator(locale);
@@ -192,5 +197,3 @@ export default async function CalendarPage() {
     </div>
   );
 }
-
-export const dynamic = "force-dynamic";

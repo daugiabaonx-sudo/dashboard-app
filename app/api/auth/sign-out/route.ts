@@ -6,7 +6,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { setSignedInUserId } from "@/lib/supabase/mock";
 import { isMockMode } from "@/lib/supabase/env";
 
-export const dynamic = "force-dynamic";
 
 export async function POST() {
   const supabase = await createSupabaseServerClient();

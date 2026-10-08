@@ -7,7 +7,6 @@ import { requireUser } from "@/lib/auth/session";
 import { listPlanBuckets, listPlanTasks } from "@/lib/planner/planner-api";
 import { plannerErrorResponse } from "@/lib/planner/route-errors";
 
-export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: Request,

@@ -18,5 +18,3 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   const dataset = await getSxViewDataset();
   return <SxTasksView dataset={dataset} focusId={focusId} />;
 }
-
-export const dynamic = "force-dynamic";
