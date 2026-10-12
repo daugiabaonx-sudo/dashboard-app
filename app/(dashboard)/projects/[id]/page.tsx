@@ -1,9 +1,8 @@
-// Legacy project detail page. It read the in-app demo data; the dashboard now
-// shows Microsoft Planner data only and Planner plans open in Planner itself
-// (see components/sunext/sx-projects-view.tsx), so old links go to the list.
+// The V2 dashboard template has three tabs (Tổng quan, Dự án & Công việc,
+// Cài đặt); this legacy route now redirects to the matching tab.
 
 import { redirect } from "next/navigation";
 
-export default function ProjectDetailPage(): never {
-  redirect("/projects");
+export default function LegacyRedirect() {
+  redirect("/tasks");
 }

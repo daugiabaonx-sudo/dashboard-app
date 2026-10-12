@@ -1,20 +1,27 @@
-// "Công việc" — SUNEXT template task list (sidebar.js#buildTasksView).
-// `?focus=<taskId>` opens that task's modal (deep links from notifications
-// and the calendar).
+// "Dự án & Công việc" — SUNEXT Dashboard V2 template.
+// `?focus=<plannerTaskId>` opens that task's modal (deep links).
 
 import type { Metadata } from "next";
-import { SxTasksView } from "@/components/sunext/sx-tasks-view";
-import { getSxViewDataset } from "@/lib/sx-view-dataset";
+import { Suspense } from "react";
+import { V2Page, V2PageFallback } from "@/components/v2/v2-page";
 
-export const metadata: Metadata = { title: "Công việc · SUNEXT Dashboard" };
+export const metadata: Metadata = { title: "Dự án & Công việc · SUNEXT Dashboard" };
 
 interface TasksPageProps {
   searchParams: Promise<{ focus?: string }>;
 }
 
-export default async function TasksPage({ searchParams }: TasksPageProps) {
+async function TasksView({ searchParams }: TasksPageProps) {
   const params = await searchParams;
-  const focusId = typeof params.focus === "string" ? params.focus : undefined;
-  const dataset = await getSxViewDataset();
-  return <SxTasksView dataset={dataset} focusId={focusId} />;
+  const focusPid = typeof params.focus === "string" ? params.focus.slice(0, 200) : undefined;
+  return <V2Page view="tasks" focusPid={focusPid} />;
+}
+
+// searchParams is runtime data: read it under this page's own <Suspense>.
+export default function TasksPage({ searchParams }: TasksPageProps) {
+  return (
+    <Suspense fallback={<V2PageFallback />}>
+      <TasksView searchParams={searchParams} />
+    </Suspense>
+  );
 }

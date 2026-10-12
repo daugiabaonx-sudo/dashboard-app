@@ -1,9 +1,8 @@
-// Legacy member detail page. It read the in-app demo data; the dashboard now
-// shows Microsoft Planner data only (members have no detail page), so old
-// links go to the team list.
+// The V2 dashboard template has three tabs (Tổng quan, Dự án & Công việc,
+// Cài đặt); this legacy route now redirects to the matching tab.
 
 import { redirect } from "next/navigation";
 
-export default function TeamMemberPage(): never {
-  redirect("/team");
+export default function LegacyRedirect() {
+  redirect("/tasks");
 }

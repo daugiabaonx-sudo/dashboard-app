@@ -1,22 +1,14 @@
-// Home page — SUNEXT "dark futuristic" template, rendered 1:1 from
-// Dashboard Sunext/dashboard_sunext_dark_futuristic_one_screen_balanced.html.
-// The shell (sidebar + topbar) lives in the (dashboard) layout; every section
-// reuses the template's exact markup + stylesheet (components/sunext/*).
-// Data: Microsoft Planner only (empty + note when Planner is unavailable).
+// "Tổng quan" — SUNEXT Dashboard V2 template (Dashboard Sunext V2/index.html),
+// rendered with Microsoft Planner data. See components/v2/v2-page.tsx.
 
 import type { Metadata } from "next";
-import { SxOverview } from "@/components/sunext/sx-overview";
-import { requireUser } from "@/lib/auth/session";
-import { displayName } from "@/lib/sx-shell-data";
-import { getSxViewDataset } from "@/lib/sx-view-dataset";
+import { V2Page } from "@/components/v2/v2-page";
 
 export const metadata: Metadata = {
   title: "SUNEXT Dashboard",
-  description: "SUNEXT Team Management Dashboard",
+  description: "SUNEXT Team Management Dashboard – Indigo Care",
 };
 
-export default async function DashboardPage() {
-  const session = await requireUser();
-  const dataset = await getSxViewDataset();
-  return <SxOverview dataset={dataset} profileName={displayName(session)} />;
+export default function DashboardPage() {
+  return <V2Page view="overview" />;
 }

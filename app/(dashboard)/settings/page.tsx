@@ -1,32 +1,10 @@
-// "Cài đặt" — SUNEXT template settings (sidebar.js#buildSettingsView):
-// profile and system info.
+// "Cài đặt" — V2 template placeholder tab ("sẽ được thiết kế ở giai đoạn tiếp theo").
 
 import type { Metadata } from "next";
-import { SxSettingsView } from "@/components/sunext/sx-settings-view";
-import { getUserRole } from "@/lib/auth/role";
-import { requireUser } from "@/lib/auth/session";
-import { isPlannerConfigured } from "@/lib/planner/config";
-import { buildSxShell } from "@/lib/sx-shell-data";
-import { getSxViewDataset } from "@/lib/sx-view-dataset";
+import { V2Page } from "@/components/v2/v2-page";
 
 export const metadata: Metadata = { title: "Cài đặt · SUNEXT Dashboard" };
 
-export default async function SettingsPage() {
-  const session = await requireUser();
-  const [dataset, role] = await Promise.all([getSxViewDataset(), getUserRole(session.userId)]);
-  const { profile, canEdit } = buildSxShell(session, dataset, role);
-  const configured = isPlannerConfigured();
-  return (
-    <SxSettingsView
-      info={{
-        name: profile.name,
-        roleLabel: `${profile.roleLabel} · ${canEdit ? "được sửa công việc" : "chỉ xem"}`,
-        email: session.email,
-        mode: configured ? "Microsoft Planner" : "Chưa cấu hình Microsoft Planner",
-        storage: configured
-          ? `Microsoft Planner · ${dataset.projects.length} bảng, ${dataset.tasks.length} công việc`
-          : "—",
-      }}
-    />
-  );
+export default function SettingsPage() {
+  return <V2Page view="settings" />;
 }

@@ -1,13 +1,8 @@
-// "Nhân viên" — SUNEXT template employee cards (sidebar.js#buildEmployeesView),
-// built from Microsoft Planner task assignees.
+// The V2 dashboard template has three tabs (Tổng quan, Dự án & Công việc,
+// Cài đặt); this legacy route now redirects to the matching tab.
 
-import type { Metadata } from "next";
-import { SxEmployeesView } from "@/components/sunext/sx-employees-view";
-import { getSxViewDataset } from "@/lib/sx-view-dataset";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Nhân viên · SUNEXT Dashboard" };
-
-export default async function TeamPage() {
-  const dataset = await getSxViewDataset();
-  return <SxEmployeesView dataset={dataset} />;
+export default function LegacyRedirect() {
+  redirect("/tasks");
 }

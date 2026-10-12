@@ -1,15 +1,8 @@
-// "Thông báo" — SUNEXT template notification list
-// (sidebar.js#buildNotificationsView). Microsoft Planner has no
-// notifications feed, so this lists whatever the Planner dataset carries
-// (currently none).
+// The V2 dashboard template has three tabs (Tổng quan, Dự án & Công việc,
+// Cài đặt); this legacy route now redirects to the matching tab.
 
-import type { Metadata } from "next";
-import { SxNotificationsView } from "@/components/sunext/sx-notifications-view";
-import { getSxViewDataset } from "@/lib/sx-view-dataset";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Thông báo · SUNEXT Dashboard" };
-
-export default async function NotificationsPage() {
-  const dataset = await getSxViewDataset();
-  return <SxNotificationsView notifications={dataset.notifications} />;
+export default function LegacyRedirect() {
+  redirect("/");
 }
