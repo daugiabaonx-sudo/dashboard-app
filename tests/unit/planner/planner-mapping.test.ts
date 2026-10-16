@@ -161,10 +161,30 @@ describe("buildPlannerDataset", () => {
 
   it("builds employees from assignees, with fallbacks for unknown names", () => {
     const byId = new Map(ds.employees.map((e) => [e.id, e]));
-    expect(byId.get(U1)).toMatchObject({ name: "Lan Nguyen", initials: "LN", role: "Dev", team: "R&D" });
+    expect(byId.get(U1)).toMatchObject({ name: "Lan Nguyen", initials: "LN", role: "Dev", team: "Tech" });
     expect(byId.get(U2)?.name).toMatch(/^Thành viên /);
     expect(byId.get(U2)?.team).toBe("Tech");
     expect(byId.get(PLANNER_UNASSIGNED_ID)?.name).toBe("Chưa giao");
+  });
+
+  it("puts assignees of the same plan in the plan's group even when their AD departments differ", () => {
+    const samePlan = buildPlannerDataset(
+      {
+        ...src,
+        tasks: [
+          task({ id: "m1", planId: "plan2", assignments: { [U1]: {} } }),
+          task({ id: "m2", planId: "plan2", assignments: { [U2]: {} } }),
+        ],
+        members: {
+          g2: [
+            { id: U1, displayName: "My Nguyen", jobTitle: null, department: "1 - Company" },
+            { id: U2, displayName: "Thu Nguyen", jobTitle: null, department: "Marketing" },
+          ],
+        },
+      },
+      NOW,
+    );
+    expect(samePlan.employees.map((e) => e.team)).toEqual(["Marketing", "Marketing"]);
   });
 
   it("fills names from looked-up users (User.Read.All) when member lists lack them", () => {

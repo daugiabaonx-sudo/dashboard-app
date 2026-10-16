@@ -80,7 +80,7 @@ describe("buildV2Model", () => {
       id: "T-001",
       pid: "p1",
       owner: "Bao Dau",
-      team: "Tech",
+      team: "1 - Company",
       project: "Sunext Manage Task",
       start: "2026-10-01",
       deadline: "2026-10-20",
@@ -137,8 +137,37 @@ describe("buildV2Model", () => {
     expect(m.blockers[0]).toEqual({ id: "b1", issue: "Kẹt", project: "Sunext Manage Task", sev: "high", days: 3, action: "Escalate", owner: "Bao Dau", detail: "Ảnh hưởng công việc: Task" });
     expect(m.blockers[1]).toMatchObject({ action: "", owner: "Chưa giao", project: "", detail: "" });
     expect(m.notifications).toEqual([{ title: "Mới", message: "m", color: "#f00" }]);
-    expect(m.teams).toEqual(["Tech"]);
+    expect(m.teams).toEqual(["1 - Company"]);
     expect(m.sourceNote).toBe("note");
+  });
+
+  it("assigns each task the team of its plan's group, so one person can appear in several teams", () => {
+    const m = buildV2Model(
+      dataset({
+        employees: [
+          { id: "my", name: "My Nguyen", initials: "MN", role: "—", team: "1 - Company", avatar: "avatar-1" },
+          { id: "thu", name: "Thu Nguyen", initials: "TN", role: "—", team: "Marketing", avatar: "avatar-2" },
+        ],
+        projects: [
+          { id: "todo", name: "To do list", color: "#000", group: "1 - Company" },
+          { id: "mkt", name: "Marketing Manage Task", color: "#000", group: "Marketing" },
+        ],
+        tasks: [
+          task({ id: "ai-news", employeeId: "my", projectId: "todo" }),
+          task({ id: "lam-sach", employeeId: "my", projectId: "mkt" }),
+          task({ id: "to-khai", employeeId: "thu", projectId: "mkt" }),
+        ],
+      }),
+      TODAY,
+    );
+    const marketing = m.tasks.filter((t) => t.team === "Marketing").map((t) => t.pid);
+    expect(marketing.sort()).toEqual(["lam-sach", "to-khai"]);
+    expect(m.teams).toEqual(["1 - Company", "Marketing"]);
+  });
+
+  it("falls back to the owner's team when the plan has no group", () => {
+    const m = buildV2Model(dataset({ tasks: [task({ projectId: "plan2" })] }), TODAY);
+    expect(m.tasks[0].team).toBe("Tech");
   });
 
   it("omits sourceNote when absent", () => {

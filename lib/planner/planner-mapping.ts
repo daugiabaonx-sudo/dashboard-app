@@ -122,7 +122,7 @@ function buildEmployees(src: PlannerSource, tasks: readonly SxTask[]): SxEmploye
       name,
       initials: m?.displayName?.trim() ? initialsOf(name) : short.slice(0, 2).toUpperCase(),
       role: m?.jobTitle?.trim() || "Thành viên",
-      team: m?.department?.trim() || teamOf.get(id) || "Planner",
+      team: teamOf.get(id) || m?.department?.trim() || "Planner",
       avatar,
     };
   });

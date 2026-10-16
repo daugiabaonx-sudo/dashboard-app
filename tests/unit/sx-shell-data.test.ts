@@ -48,6 +48,17 @@ describe("buildSxShell", () => {
     expect(buildSxShell({ userId: "u", email: "", fullName: "X" }, DS, null).teams).toEqual(["Bán hàng", "Kỹ thuật"]);
   });
 
+  it("also lists plan groups reached only through tasks", () => {
+    const ds: SxDataset = {
+      ...DS,
+      projects: [{ id: "mkt", name: "Marketing Manage Task", color: "#000", group: "Marketing" }],
+      tasks: [
+        { id: "t", title: "t", employeeId: "a", projectId: "mkt", priority: "low", status: "in_progress", progress: 0, deadline: "", notes: "" },
+      ],
+    };
+    expect(buildSxShell({ userId: "u", email: "", fullName: "X" }, ds, null).teams).toEqual(["Bán hàng", "Kỹ thuật", "Marketing"]);
+  });
+
   it("lists Planner plan names as projects and passes notifications through", () => {
     const shell = buildSxShell({ userId: "u", email: "", fullName: "X" }, DS, null);
     expect(shell.projects).toEqual(["Website", "App"]);

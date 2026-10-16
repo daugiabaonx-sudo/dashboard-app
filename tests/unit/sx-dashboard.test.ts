@@ -208,6 +208,43 @@ describe("filters", () => {
     expect(filterBlockers(ds, { ...ALL, team: "Product" }).map((b) => b.id)).toEqual(["b1"]);
     expect(filterBlockers(ds, { ...ALL, project: "Beta" }).map((b) => b.id)).toEqual(["b2"]);
   });
+
+  describe("when plans carry a Planner group", () => {
+    const grouped: SxDataset = {
+      ...ds,
+      employees: [
+        { id: "my", name: "My Nguyen", initials: "MN", role: "Member", team: "1 - Company", avatar: "avatar-1" },
+        { id: "thu", name: "Thu Nguyen", initials: "TN", role: "Member", team: "Marketing", avatar: "avatar-2" },
+      ],
+      projects: [
+        { id: "todo", name: "To do list", color: "#000", group: "1 - Company" },
+        { id: "mkt", name: "Marketing Manage Task", color: "#111", group: "Marketing" },
+      ],
+      tasks: [
+        { id: "ai-news", title: "AI news", employeeId: "my", projectId: "todo", priority: "low", status: "in_progress", progress: 0, deadline: "2026-10-16", notes: "" },
+        { id: "lam-sach", title: "Làm sạch", employeeId: "my", projectId: "mkt", priority: "high", status: "in_progress", progress: 50, deadline: "2026-10-16", notes: "" },
+        { id: "to-khai", title: "Tờ khai", employeeId: "thu", projectId: "mkt", priority: "high", status: "in_progress", progress: 50, deadline: "2026-10-16", notes: "" },
+      ],
+      blockers: [
+        { id: "b-mkt", taskId: "lam-sach", issue: "x", severity: "high", daysBlocked: 1, actionRequired: "Approve", taskTitle: "Làm sạch", employeeId: "my", projectId: "mkt", status: "open" },
+      ],
+    };
+
+    it("matches the team against the task's plan group, not the owner's single team", () => {
+      expect(filterTasks(grouped, { ...ALL, team: "Marketing" }, now).map((t) => t.id)).toEqual(["lam-sach", "to-khai"]);
+      expect(filterTasks(grouped, { ...ALL, team: "1 - Company" }, now).map((t) => t.id)).toEqual(["ai-news"]);
+    });
+
+    it("filters blockers by their plan group", () => {
+      expect(filterBlockers(grouped, { ...ALL, team: "Marketing" }).map((b) => b.id)).toEqual(["b-mkt"]);
+      expect(filterBlockers(grouped, { ...ALL, team: "1 - Company" })).toEqual([]);
+    });
+
+    it("searches by the plan group", () => {
+      expect(filterTasks(grouped, { ...ALL, search: "to do list" }, now).map((t) => t.id)).toEqual(["ai-news"]);
+      expect(filterTasks(grouped, { ...ALL, search: "1 - company" }, now).map((t) => t.id)).toEqual(["ai-news"]);
+    });
+  });
 });
 
 describe("kpis and health", () => {

@@ -4,7 +4,7 @@
 
 import type { SxShellProps } from "@/components/sunext/sx-shell";
 import { canEditPlanner, roleLabel } from "@/lib/auth/permissions";
-import type { SxDataset } from "@/lib/sx-dashboard";
+import { taskTeamOf, type SxDataset } from "@/lib/sx-dashboard";
 
 export type SxShellData = Omit<SxShellProps, "children">;
 
@@ -32,7 +32,10 @@ export function displayName(identity: SxShellIdentity): string {
 /** @param role the user's profile role (lib/auth/role#getUserRole); null = unknown, read-only. */
 export function buildSxShell(identity: SxShellIdentity, dataset: SxDataset, role: string | null): SxShellData {
   const name = displayName(identity);
-  const teams = [...new Set(dataset.employees.map((e) => e.team))]
+  const projById = new Map(dataset.projects.map((p) => [p.id, p]));
+  const empById = new Map(dataset.employees.map((e) => [e.id, e]));
+  const taskTeams = dataset.tasks.map((t) => taskTeamOf(projById.get(t.projectId), empById.get(t.employeeId)));
+  const teams = [...new Set([...dataset.employees.map((e) => e.team), ...taskTeams])]
     .filter((team) => team && team !== NO_TEAM)
     .sort((a, b) => a.localeCompare(b, "vi"));
   return {

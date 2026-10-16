@@ -8,7 +8,7 @@
 // "so với tuần trước" deltas are reconstructed from task createdAt /
 // completedAt / deadline dates (no sample numbers).
 
-import type { SxDataset, SxPriority, SxStatus, SxTask } from "@/lib/sx-dashboard";
+import { taskTeamOf, type SxDataset, type SxPriority, type SxStatus, type SxTask } from "@/lib/sx-dashboard";
 
 export type V2Risk = "critical" | "high" | "medium" | "low";
 export type V2Status = "working" | "blocked" | "done" | "todo";
@@ -126,8 +126,8 @@ export function buildV2Model(ds: SxDataset, today: Date): V2Model {
   const employees = new Map(ds.employees.map((e) => [e.id, e]));
   const projects = new Map(ds.projects.map((p) => [p.id, p]));
   const codes = codesFor(ds.tasks);
-  const teamOf = (employeeId: string) => {
-    const team = employees.get(employeeId)?.team ?? "";
+  const teamOf = (t: SxTask) => {
+    const team = taskTeamOf(projects.get(t.projectId), employees.get(t.employeeId));
     return team && team !== NO_TEAM ? team : "Chưa có team";
   };
 
@@ -136,7 +136,7 @@ export function buildV2Model(ds: SxDataset, today: Date): V2Model {
     pid: t.id,
     title: t.title,
     owner: employees.get(t.employeeId)?.name ?? "Chưa giao",
-    team: teamOf(t.employeeId),
+    team: teamOf(t),
     project: projects.get(t.projectId)?.name ?? "Không có dự án",
     start: startOf(t, todayIso),
     deadline: t.deadline ?? "",

@@ -291,6 +291,14 @@ function periodBounds(period: SxPeriod, now: Date): { start: Date; end: Date } |
   }
 }
 
+/**
+ * A task belongs to its plan's group; one person can work across several
+ * groups, so the owner's single `team` is only a fallback for ungrouped plans.
+ */
+export function taskTeamOf(project: SxProject | undefined, employee: SxEmployee | undefined): string {
+  return project?.group?.trim() || employee?.team || "";
+}
+
 export function filterTasks(ds: SxDataset, filters: SxFilters, now: Date): SxTask[] {
   const search = filters.search.trim().toLowerCase();
   const bounds = periodBounds(filters.period, now);
@@ -300,13 +308,14 @@ export function filterTasks(ds: SxDataset, filters: SxFilters, now: Date): SxTas
   return ds.tasks.filter((task) => {
     const emp = empById.get(task.employeeId);
     const proj = projById.get(task.projectId);
+    const team = taskTeamOf(proj, emp);
     if (search) {
-      const haystack = [task.title, task.id, emp?.name ?? "", emp?.team ?? "", proj?.name ?? "", task.status, task.priority]
+      const haystack = [task.title, task.id, emp?.name ?? "", team, proj?.name ?? "", task.status, task.priority]
         .join(" ")
         .toLowerCase();
       if (!haystack.includes(search)) return false;
     }
-    if (filters.team !== "all" && emp?.team !== filters.team) return false;
+    if (filters.team !== "all" && team !== filters.team) return false;
     if (filters.project !== "all" && proj?.name !== filters.project) return false;
     if (bounds) {
       const deadline = new Date(task.deadline);
@@ -321,7 +330,9 @@ export function filterBlockers(ds: SxDataset, filters: SxFilters): SxBlocker[] {
   const projById = new Map(ds.projects.map((p) => [p.id, p]));
   return ds.blockers.filter((b) => {
     if (filters.project !== "all" && projById.get(b.projectId)?.name !== filters.project) return false;
-    if (filters.team !== "all" && empById.get(b.employeeId)?.team !== filters.team) return false;
+    if (filters.team !== "all" && taskTeamOf(projById.get(b.projectId), empById.get(b.employeeId)) !== filters.team) {
+      return false;
+    }
     return true;
   });
 }
