@@ -12,8 +12,9 @@ vi.mock("@/lib/logger", () => ({ error: vi.fn() }));
 // (process.env.__NEXT_USE_CACHE set). Vitest runs in plain Node, so
 // stub it as a no-op — the real `cacheComponents` config is exercised
 // by `next build` and the dev server, not by unit tests.
-vi.mock("next/cache", () => ({ cacheLife: () => undefined }));
+vi.mock("next/cache", () => ({ cacheLife: vi.fn(), cacheTag: vi.fn() }));
 
+import { cacheLife, cacheTag } from "next/cache";
 import { isPlannerConfigured } from "@/lib/planner/config";
 import { loadPlannerDataset } from "@/lib/planner/planner-dataset";
 import { error as logError } from "@/lib/logger";
@@ -66,6 +67,14 @@ describe("getSxViewDataset", () => {
     vi.mocked(isPlannerConfigured).mockReturnValue(true);
     vi.mocked(loadPlannerDataset).mockResolvedValue(PLANNER_DS);
     expect(await getSxViewDataset()).toBe(PLANNER_DS);
+  });
+
+  it("tags the cross-request cache and refreshes it within minutes, not days", async () => {
+    vi.mocked(isPlannerConfigured).mockReturnValue(true);
+    vi.mocked(loadPlannerDataset).mockResolvedValue(PLANNER_DS);
+    await getSxViewDataset();
+    expect(cacheTag).toHaveBeenCalledWith("planner-dataset");
+    expect(cacheLife).toHaveBeenCalledWith("minutes");
   });
 
   it("returns an empty dataset with an error note (no demo data) and logs when Planner fails", async () => {

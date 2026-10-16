@@ -15,7 +15,9 @@ vi.mock("@/lib/planner/planner-api", () => ({
   updateTask: vi.fn(),
 }));
 vi.mock("@/lib/planner/planner-dataset", () => ({ invalidatePlannerSource: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
 
+import { revalidateTag } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { getUserRole } from "@/lib/auth/role";
 import { getGraphToken, readTokenRoles } from "@/lib/planner/token";
@@ -171,6 +173,7 @@ describe("PATCH /api/planner/tasks/:taskId", () => {
     expect(res.status).toBe(200);
     expect(updateTask).toHaveBeenCalledWith("t1", 'W/"1"', { percentComplete: 100 });
     expect(invalidatePlannerSource).toHaveBeenCalledTimes(1);
+    expect(revalidateTag).toHaveBeenCalledWith("planner-dataset", "max");
     expect(res.json).toMatchObject({
       etag: 'W/"2"',
       task: { id: "t1", projectId: "plan_1", status: "completed", progress: 100, priority: "high" },
@@ -193,6 +196,7 @@ describe("PATCH /api/planner/tasks/:taskId", () => {
     const res = await patch({ etag: 'W/"old"', patch: { priority: 3 } });
     expect(res.status).toBe(409);
     expect(invalidatePlannerSource).not.toHaveBeenCalled();
+    expect(revalidateTag).not.toHaveBeenCalled();
   });
 
   it("maps invalid patches to 400", async () => {

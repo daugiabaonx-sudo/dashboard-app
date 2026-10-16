@@ -184,7 +184,20 @@ describe("snapshotAt", () => {
       v2({ deadline: "2026-10-02" }), // late on 10-05
       v2({ status: "todo" }),
     ];
-    expect(snapshotAt(tasks, "2026-10-05", "2026-10-13")).toEqual({ total: 4, done: 1, work: 1, late: 1, block: 0 });
+    expect(snapshotAt(tasks, "2026-10-05", "2026-10-13")).toEqual({ total: 4, done: 1, work: 1, late: 1, block: 0, todo: 1 });
+  });
+
+  it("puts every task in exactly one bucket, so the KPI cards add up to the total", () => {
+    const tasks = [
+      v2({ status: "todo" }),
+      v2({ status: "todo", deadline: "2026-10-01" }),
+      v2({ status: "working" }),
+      v2({ status: "blocked" }),
+      v2({ status: "done", completedAt: "2026-10-02" }),
+    ];
+    const s = snapshotAt(tasks, "2026-10-13", "2026-10-13");
+    expect(s).toEqual({ total: 5, done: 1, work: 1, late: 1, block: 1, todo: 1 });
+    expect(s.done + s.work + s.late + s.block + s.todo).toBe(s.total);
   });
 
   it("uses current status for today when completion/blocked dates are unknown", () => {
@@ -214,6 +227,13 @@ describe("computeTrend", () => {
     expect(trend.spark.total.at(-2)).toBe(1);
     expect(trend.delta.total).toEqual(["↑ 100%", "good"]);
     expect(trend.delta.done).toEqual(["↑ 1", "good"]);
+  });
+
+  it("tracks not-started tasks for the 'Chưa bắt đầu' card", () => {
+    const tasks = [v2({ status: "todo", createdAt: "2026-10-01" }), v2({ status: "todo", createdAt: "2026-10-12" })];
+    const trend = computeTrend(tasks, TODAY);
+    expect(trend.spark.todo.slice(-2)).toEqual([1, 2]);
+    expect(trend.delta.todo).toEqual(["↑ 100%", "badc"]);
   });
 
   it("handles a single point", () => {
