@@ -28,7 +28,7 @@ const TIME_ZONE = "Asia/Ho_Chi_Minh";
 const DEADLINE_UTC_TIME = "T05:00:00Z";
 const PROJECT_COLORS = ["#7b2ff2", "#9e83f5", "#17c98b", "#ff7a00", "#8d68df", "#24c6ff", "#ff6170"];
 const PRIORITY_TO_PLANNER: Record<SxPriority, number> = { high: 3, medium: 5, low: 9 };
-const OVERDUE_BLOCKED_RATIO = 0.3;
+export const OVERDUE_BLOCKED_RATIO = 0.3;
 
 export interface PlannerSource {
   readonly tenantId: string;

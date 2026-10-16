@@ -5,7 +5,8 @@
 //   * TODAY is the real current date (the template hard-coded 2026-10-12);
 //   * tasks may have no deadline ("") — every date helper guards for it.
 
-import type { V2Task } from "@/lib/v2/v2-model";
+import { OVERDUE_BLOCKED_RATIO } from "@/lib/planner/planner-mapping";
+import type { V2Project, V2Task } from "@/lib/v2/v2-model";
 
 export type V2State = "done" | "working" | "overdue" | "blocked" | "todo";
 
@@ -49,6 +50,17 @@ export const HMAP = {
   atRisk: ["At Risk", "p-warn", 1],
   blocked: ["Blocked", "p-block", 2],
 } as const;
+export type V2HealthKey = keyof typeof HMAP;
+export type V2Counts = Record<V2State | "total", number>;
+export interface V2ProjectStat {
+  readonly name: string;
+  readonly deadline: string;
+  readonly progress: number;
+  readonly tasks: number;
+  readonly done: number;
+  readonly health: V2HealthKey;
+  readonly group: string;
+}
 export const STO: Record<V2State, number> = { overdue: 0, blocked: 1, working: 2, todo: 3, done: 4 };
 export const GT_STATE: Record<V2State, string> = {
   working: "#5155EA",
@@ -133,7 +145,32 @@ export function createHelpers(TODAY: Date) {
   const dlKey = (t: V2Task) => t.deadline || NO_DEADLINE_KEY;
   /** Gantt end date: deadline, or the start date when there is none. */
   const endOf = (t: V2Task) => t.deadline || t.start;
-  return { TODAY, fmtD, fmtFull, isLate, daysLate, stateOf, daysLeft, isSoon, needsAtt, prio, dueTxt, pjDue, dlKey, endOf };
+  /** One state per task, so KPI cards, health and tables reconcile with `total`. */
+  const countStates = (list: readonly V2Task[]): V2Counts => {
+    const c: V2Counts = { total: list.length, done: 0, working: 0, overdue: 0, blocked: 0, todo: 0 };
+    list.forEach((t) => c[stateOf(t)]++);
+    return c;
+  };
+  const inAttention = (t: V2Task) => stateOf(t) !== "done";
+  const projectHealth = (list: readonly V2Task[]): V2HealthKey => {
+    const c = countStates(list);
+    if (c.blocked > 0 || (c.total > 0 && c.overdue / c.total >= OVERDUE_BLOCKED_RATIO)) return "blocked";
+    return c.overdue > 0 ? "atRisk" : "onTrack";
+  };
+  /** Per-project figures from the given (already filtered) tasks; projects without tasks are dropped. */
+  const projectStats = (projects: readonly V2Project[], list: readonly V2Task[]): V2ProjectStat[] =>
+    projects
+      .map((p) => {
+        const own = list.filter((t) => t.project === p.name);
+        const progress = own.length ? Math.round(own.reduce((a, t) => a + t.progress, 0) / own.length) : 0;
+        const done = own.filter((t) => stateOf(t) === "done").length;
+        return { name: p.name, deadline: p.deadline, progress, tasks: own.length, done, health: projectHealth(own), group: p.group };
+      })
+      .filter((p) => p.tasks > 0);
+  return {
+    TODAY, fmtD, fmtFull, isLate, daysLate, stateOf, daysLeft, isSoon, needsAtt, prio, dueTxt, pjDue, dlKey, endOf,
+    countStates, inAttention, projectHealth, projectStats,
+  };
 }
 
 export type V2Helpers = ReturnType<typeof createHelpers>;

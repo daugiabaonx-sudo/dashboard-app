@@ -100,8 +100,8 @@ export function installTasks(ctx: V2Ctx) {
   }
 
   function renderProjStrip() {
-    const ps = projStats(ctx, "all");
     const allTasks = ctx.TASKS.filter((t) => S.team === "all" || t.team === S.team);
+    const ps = projStats(ctx, allTasks);
     const avgAll = ps.length ? Math.round(ps.reduce((a, p) => a + p.progress, 0) / ps.length) : 0;
     const themeIndex = new Map(ctx.PROJECTS.map((p, i) => [p.name, i]));
 

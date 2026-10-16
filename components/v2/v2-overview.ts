@@ -24,7 +24,6 @@ import {
   sortBy,
   spark,
   svg,
-  type V2State,
 } from "./v2-core";
 
 type Health = readonly [string, string, number];
@@ -116,14 +115,14 @@ function countUp(el: HTMLElement & { dataset: DOMStringMap }, to: number) {
 }
 
 function renderKpis(ctx: V2Ctx, list: V2Task[]) {
-  const c: Record<V2State | "total", number> = { total: list.length, done: 0, working: 0, overdue: 0, blocked: 0, todo: 0 };
-  list.forEach((t) => c[ctx.h.stateOf(t)]++);
+  const c = ctx.h.countStates(list);
   const pctOf = (n: number) => (c.total ? ((n / c.total) * 100).toFixed(1) : 0);
   const { spark: sp, delta: dl } = computeTrend(list, ctx.h.TODAY);
   const cards = [
     { cls: "hero-card", t: "Tổng công việc", ico: ICO.list, v: c.total, d: dl.total, cap: "so với tuần trước", sp: sp.total, col: "#fff" },
     { cls: "k-ok", t: "Đã hoàn thành", ico: ICO.check, v: c.done, d: dl.done, cap: `${pctOf(c.done)}% tổng công việc`, sp: sp.done, col: "#22B07D" },
     { cls: "", t: "Đang thực hiện", ico: ICO.clock, v: c.working, d: dl.work, cap: `${pctOf(c.working)}% tổng công việc`, sp: sp.work, col: "#5155EA" },
+    { cls: "", t: "Chưa bắt đầu", ico: ICO.list, v: c.todo, d: dl.todo, cap: `${pctOf(c.todo)}% tổng công việc`, sp: sp.todo, col: "#8B8FA8" },
     { cls: "k-bad", t: "Trễ hạn", ico: ICO.alert, v: c.overdue, d: dl.late, cap: `${pctOf(c.overdue)}% tổng công việc`, sp: sp.late, col: "#EF5B6B" },
     { cls: "k-block", t: "Bị chặn", ico: ICO.pause, v: c.blocked, d: dl.block, cap: `${pctOf(c.blocked)}% tổng công việc`, sp: sp.block, col: "#F2873A" },
   ];
@@ -148,7 +147,7 @@ function renderKpis(ctx: V2Ctx, list: V2Task[]) {
 
 function renderTasks(ctx: V2Ctx, list: V2Task[]) {
   const { S, h, $ } = ctx;
-  const rows = list.filter((t) => !["done", "todo"].includes(h.stateOf(t)));
+  const rows = list.filter(h.inAttention);
   const get = (t: V2Task, k: string) =>
     ({
       title: t.title.toLowerCase(),
@@ -184,8 +183,7 @@ function renderTasks(ctx: V2Ctx, list: V2Task[]) {
 
 function renderHealth(ctx: V2Ctx, list: V2Task[]) {
   const n = list.length || 1;
-  const c: Record<V2State, number> = { done: 0, working: 0, overdue: 0, blocked: 0, todo: 0 };
-  list.forEach((t) => c[ctx.h.stateOf(t)]++);
+  const c = ctx.h.countStates(list);
   const onTrack = c.done + c.working + c.todo;
   const score = list.length ? Math.round(((onTrack + c.overdue * 0.4) / n) * 100) : 0;
   const vals = list.length ? [onTrack, c.overdue, c.blocked].map((v) => Math.round((v / n) * 100)) : [0, 0, 0];
@@ -214,26 +212,16 @@ export interface ProjStat {
   group: string;
 }
 
-export function projStats(ctx: V2Ctx, project = ctx.S.project): ProjStat[] {
-  const { S, h } = ctx;
-  return ctx.PROJECTS.filter((p) => project === "all" || p.name === project)
-    .map((p) => {
-      if (S.team === "all")
-        return { name: p.name, deadline: p.deadline, progress: p.progress, tasks: p.total, done: p.done, health: HMAP[p.health], group: p.group };
-      const ts = ctx.TASKS.filter((t) => t.project === p.name && t.team === S.team);
-      const prog = ts.length ? Math.round(ts.reduce((a, t) => a + t.progress, 0) / ts.length) : 0;
-      const st = ts.map(h.stateOf);
-      const health = st.includes("blocked") ? HMAP.blocked : st.includes("overdue") ? HMAP.atRisk : HMAP.onTrack;
-      return { name: p.name, deadline: p.deadline, progress: prog, tasks: ts.length, done: ts.filter((t) => t.status === "done").length, health, group: p.group };
-    })
-    .filter((p) => p.tasks > 0 || S.team === "all");
+/** Project rows computed from the same task list as the KPI cards. */
+export function projStats(ctx: V2Ctx, tasks: readonly V2Task[]): ProjStat[] {
+  return ctx.h.projectStats(ctx.PROJECTS, tasks).map((p) => ({ ...p, health: HMAP[p.health] }));
 }
 
 export function renderProjects(ctx: V2Ctx) {
   const { S, h, $ } = ctx;
   const get = (p: ProjStat, k: string) =>
     ({ name: p.name, progress: p.progress, deadline: p.deadline || "9999-12-31", tasks: p.tasks, health: p.health[2] })[k] ?? "";
-  const all = sortBy(projStats(ctx), S.pSort.key, S.pSort.dir, get);
+  const all = sortBy(projStats(ctx, ctx.filtered()), S.pSort.key, S.pSort.dir, get);
   const pages = Math.max(1, Math.ceil(all.length / S.pSize));
   S.pPage = Math.min(S.pPage, pages);
   const start = (S.pPage - 1) * S.pSize;

@@ -7,18 +7,18 @@
 // dashboard pages is instant:
 //   1. `React.cache(...)` — dedupes calls *within a single request*.
 //      Layout and child page both call this; only the first runs.
-//   2. `'use cache'` + `cacheLife('max')` — dedupes *across requests*
-//      while `cacheComponents` is on. Repeat navigations within the
-//      cache lifetime reuse the prior render result instead of paying
-//      the Planner pipeline again. The inner in-process cache in
-//      lib/planner/planner-dataset.ts (CACHE_TTL_MS) still bounds
-//      bursty in-instance reads, and `invalidatePlannerSource()` is
-//      the primary write path.
+//   2. `'use cache'` + `cacheLife('minutes')` — dedupes *across requests*
+//      while `cacheComponents` is on, revalidating about once a minute so
+//      tasks added directly in Planner show up within minutes. Writes
+//      through the dashboard revalidate PLANNER_DATASET_TAG right away;
+//      the in-process cache in lib/planner/planner-dataset.ts
+//      (CACHE_TTL_MS) still bounds bursty in-instance Graph reads.
 
 import "server-only";
 import { cache } from "react";
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { error as logError } from "@/lib/logger";
+import { PLANNER_DATASET_TAG } from "@/lib/planner/cache-tag";
 import { isPlannerConfigured } from "@/lib/planner/config";
 import { loadPlannerDataset } from "@/lib/planner/planner-dataset";
 import type { SxDataset } from "@/lib/sx-dashboard";
@@ -45,7 +45,8 @@ export function emptyPlannerDataset(note: string): SxDataset {
 
 export const getSxViewDataset = cache(async (): Promise<SxDataset> => {
   "use cache";
-  cacheLife("max");
+  cacheLife("minutes");
+  cacheTag(PLANNER_DATASET_TAG);
   if (!isPlannerConfigured()) return emptyPlannerDataset(NOT_CONFIGURED_NOTE);
   try {
     return await loadPlannerDataset();

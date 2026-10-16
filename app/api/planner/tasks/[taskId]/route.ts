@@ -4,12 +4,14 @@
 // planner-api#updateTask (taskPatchSchema). Returns the task mapped to the
 // dashboard shape plus the new ETag for the next edit.
 
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { canEditPlanner } from "@/lib/auth/permissions";
 import { getUserRole } from "@/lib/auth/role";
 import { requireUser } from "@/lib/auth/session";
 import { updateTask } from "@/lib/planner/planner-api";
+import { PLANNER_DATASET_TAG } from "@/lib/planner/cache-tag";
 import { invalidatePlannerSource } from "@/lib/planner/planner-dataset";
 import { mapPlannerTask } from "@/lib/planner/planner-mapping";
 import { plannerErrorResponse } from "@/lib/planner/route-errors";
@@ -37,6 +39,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ taskI
   try {
     const updated = await updateTask(taskId, parsed.data.etag, parsed.data.patch as PlannerTaskPatch);
     invalidatePlannerSource();
+    revalidateTag(PLANNER_DATASET_TAG, "max");
     return NextResponse.json({
       task: mapPlannerTask(updated, Date.now()),
       etag: updated["@odata.etag"] ?? null,

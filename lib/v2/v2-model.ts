@@ -13,7 +13,7 @@ import { taskTeamOf, type SxDataset, type SxPriority, type SxStatus, type SxTask
 export type V2Risk = "critical" | "high" | "medium" | "low";
 export type V2Status = "working" | "blocked" | "done" | "todo";
 export type V2Health = "onTrack" | "atRisk" | "blocked";
-export type V2KpiKey = "total" | "done" | "work" | "late" | "block";
+export type V2KpiKey = "total" | "done" | "work" | "late" | "block" | "todo";
 export type V2DeltaTone = "good" | "badc" | "";
 
 export interface V2Task {
@@ -192,17 +192,11 @@ export function buildV2Model(ds: SxDataset, today: Date): V2Model {
 /* KPI history (sparklines + week-over-week deltas)                    */
 /* ------------------------------------------------------------------ */
 
-interface Snapshot {
-  total: number;
-  done: number;
-  work: number;
-  late: number;
-  block: number;
-}
+type Snapshot = Record<V2KpiKey, number>;
 
-/** Counts of the five KPI states as they stood at the end of `day` (YYYY-MM-DD). */
+/** KPI counts as they stood at the end of `day` (YYYY-MM-DD); every task lands in exactly one state. */
 export function snapshotAt(tasks: readonly V2Task[], day: string, todayIso: string): Snapshot {
-  const s: Snapshot = { total: 0, done: 0, work: 0, late: 0, block: 0 };
+  const s: Snapshot = { total: 0, done: 0, work: 0, late: 0, block: 0, todo: 0 };
   for (const t of tasks) {
     if (t.createdAt && t.createdAt > day) continue;
     s.total++;
@@ -210,12 +204,13 @@ export function snapshotAt(tasks: readonly V2Task[], day: string, todayIso: stri
     if (done) s.done++;
     else if (t.status === "blocked" && day >= todayIso) s.block++;
     else if (t.deadline && t.deadline < day) s.late++;
-    else if (t.status !== "todo") s.work++;
+    else if (t.status === "todo") s.todo++;
+    else s.work++;
   }
   return s;
 }
 
-const UP_IS_GOOD: Record<V2KpiKey, boolean> = { total: true, done: true, work: true, late: false, block: false };
+const UP_IS_GOOD: Record<V2KpiKey, boolean> = { total: true, done: true, work: true, late: false, block: false, todo: false };
 
 /** "↑ 12%" / "↓ 5%" with the template's tone class; "–" when there is no baseline. */
 export function deltaOf(key: V2KpiKey, prev: number, cur: number): readonly [string, V2DeltaTone] {
@@ -233,7 +228,7 @@ export function computeTrend(tasks: readonly V2Task[], today: Date, points = 7):
   const snaps = Array.from({ length: points }, (_, i) =>
     snapshotAt(tasks, shiftDays(todayIso, -7 * (points - 1 - i)), todayIso),
   );
-  const keys: V2KpiKey[] = ["total", "done", "work", "late", "block"];
+  const keys: V2KpiKey[] = ["total", "done", "work", "late", "block", "todo"];
   const spark = Object.fromEntries(keys.map((k) => [k, snaps.map((s) => s[k])])) as Record<V2KpiKey, number[]>;
   const prev = snaps[points - 2] ?? snaps[points - 1];
   const cur = snaps[points - 1];
