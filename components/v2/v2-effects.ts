@@ -4,13 +4,20 @@
 // indexes + search highlight after renders, toasts, and the light/dark theme
 // toggle (`<html data-theme>` + localStorage "sunext-theme").
 
+import {
+  DARK_THEME,
+  LIGHT_THEME,
+  THEME_KEY,
+  clearSavedTheme,
+  readSavedTheme,
+  readSystemTheme,
+  resolveThemeState,
+  writeSavedTheme,
+  type V2Theme,
+} from "@/lib/v2/v2-theme";
 import type { V2Ctx, V2ToastType } from "./v2-context";
-import { esc, svg } from "./v2-core";
+import { esc } from "./v2-core";
 
-const MOON = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
-const SUN =
-  '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
-const THEME_KEY = "sunext-theme";
 const STAGGER = [
   "#tBody tr.row",
   "#pBody tr.row",
@@ -73,35 +80,89 @@ export function createToaster(root: HTMLElement) {
   };
 }
 
-function setTheme(ctx: V2Ctx, t: "dark" | "light") {
-  document.documentElement.dataset.theme = t;
-  const btn = ctx.$("themeBtn");
-  btn.innerHTML = svg(t === "dark" ? SUN : MOON);
-  btn.setAttribute("aria-pressed", String(t === "dark"));
-  btn.title = t === "dark" ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối";
-  try {
-    localStorage.setItem(THEME_KEY, t);
-  } catch {
-    /* storage unavailable — theme applies for this visit only */
+function applyThemeState(
+  ctx: V2Ctx,
+  selectedTheme: V2Theme | null,
+  systemMql: { readonly matches: boolean } | null,
+) {
+  const state = resolveThemeState(selectedTheme, readSystemTheme(systemMql));
+  const rootEl = document.documentElement;
+  rootEl.dataset.theme = state.activeTheme;
+  rootEl.style.colorScheme = state.activeTheme;
+
+  const toggle = ctx.$("themeToggle") as HTMLInputElement | null;
+  if (toggle) {
+    toggle.checked = state.isLight;
+    toggle.setAttribute("aria-label", state.isLight ? "Bật chế độ tối" : "Bật chế độ sáng");
   }
+
+  const btn = ctx.$("themeBtn") as HTMLElement | null;
+  if (btn) {
+    btn.setAttribute("aria-pressed", String(!state.isLight));
+    btn.setAttribute("data-source", state.source);
+    btn.title = state.title;
+  }
+
+  const themeColor = document.querySelector('meta[name="theme-color"]');
+  if (themeColor) {
+    themeColor.setAttribute("content", state.metaThemeColor);
+  }
+  return state;
+}
+
+function installThemeSwitcher(ctx: V2Ctx) {
+  const storage = typeof window !== "undefined" ? window.localStorage : null;
+  const systemMql =
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: dark)")
+      : null;
+
+  let selectedTheme = readSavedTheme(storage);
+  applyThemeState(ctx, selectedTheme, systemMql);
+
+  const btn = ctx.$("themeBtn") as HTMLElement | null;
+  const toggle = ctx.$("themeToggle") as HTMLInputElement | null;
+
+  if (btn) {
+    ctx.on(btn, "click", (e: MouseEvent) => {
+      if (!e.altKey) return;
+      e.preventDefault();
+      selectedTheme = null;
+      clearSavedTheme(storage);
+      applyThemeState(ctx, null, systemMql);
+      ctx.toast("Đã đặt lại giao diện theo hệ thống");
+    });
+  }
+
+  if (toggle) {
+    ctx.on(toggle, "change", () => {
+      selectedTheme = toggle.checked ? LIGHT_THEME : DARK_THEME;
+      writeSavedTheme(selectedTheme, storage);
+      const next = applyThemeState(ctx, selectedTheme, systemMql);
+      ctx.toast(next.isLight ? "Chế độ sáng (Bạn đã chọn)" : "Chế độ tối (Bạn đã chọn)");
+    });
+  }
+
+  if (systemMql && typeof systemMql.addEventListener === "function") {
+    ctx.on(systemMql, "change", (e: MediaQueryListEvent) => {
+      if (selectedTheme === null) {
+        applyThemeState(ctx, null, typeof e?.matches === "boolean" ? e : systemMql);
+      }
+    });
+  }
+
+  ctx.on(window, "storage", (e: StorageEvent) => {
+    if (e.key !== THEME_KEY && e.key !== null) return;
+    selectedTheme = readSavedTheme(storage);
+    applyThemeState(ctx, selectedTheme, systemMql);
+  });
 }
 
 export function installEffects(ctx: V2Ctx) {
   const { $, on, later, profile } = ctx;
   const reduce = matchMedia("(prefers-reduced-motion:reduce)").matches;
 
-  /* Theme */
-  let saved: string | null = null;
-  try {
-    saved = localStorage.getItem(THEME_KEY);
-  } catch {
-    saved = null;
-  }
-  setTheme(ctx, saved === "dark" ? "dark" : "light");
-  on($("themeBtn"), "click", () => {
-    setTheme(ctx, document.documentElement.dataset.theme === "dark" ? "light" : "dark");
-    ctx.toast(document.documentElement.dataset.theme === "dark" ? "Đã bật chế độ tối 🌙" : "Đã bật chế độ sáng ☀️");
-  });
+  installThemeSwitcher(ctx);
 
   /* Typewriter: "Xin chào, …" */
   const h1 = $("heroH");

@@ -1698,3 +1698,242 @@ th{font-size:11.5px;font-weight:600;letter-spacing:.02em;text-transform:uppercas
 .panel.tvbar.is-collapsed .tvbar-toggle-sep{
   display:none !important;
 }
+
+/* =========================================================
+   DAY & NIGHT SMART THEME SWITCH (.dn-switch)
+   Ported from Mẫu UI:UX/Dark-light-toggle/style.css
+   Preserves Dashboard V2 brand palette while rendering
+   Moon + Craters + Stars (Dark) & Sun + Clouds (Light).
+========================================================= */
+.dn-switch{
+  position:relative;
+  display:inline-block;
+  flex-shrink:0;
+  width:90px;
+  height:40px;
+  border:1px solid rgba(58,58,58,.65);
+  border-radius:22px;
+  cursor:pointer;
+  box-shadow:0 4px 14px rgba(16,18,60,.12);
+  transition:transform .2s var(--ease),box-shadow .25s ease,border-color .25s ease;
+}
+[data-theme="dark"] .dn-switch{
+  border-color:rgba(186,186,255,.28);
+  box-shadow:0 6px 18px rgba(0,0,0,.38);
+}
+.dn-switch:hover{
+  transform:translateY(-1px);
+}
+.dn-switch input{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  margin:0;
+  opacity:0;
+  z-index:5;
+  cursor:pointer;
+}
+.dn-switch input:focus-visible + .dn-slider{
+  outline:3px solid var(--accent,#5155EA);
+  outline-offset:3px;
+}
+.dn-slider{
+  position:absolute;
+  inset:0;
+  display:block;
+  background-color:#080c19;
+  border-radius:inherit;
+  overflow:hidden;
+  pointer-events:none;
+  transition:background-color .5s ease;
+}
+.dn-slider::before{
+  position:absolute;
+  content:"";
+  width:30px;
+  height:30px;
+  left:4px;
+  bottom:4px;
+  background-color:#f2f2f5;
+  border-radius:50%;
+  box-shadow:0 0 0 5px rgba(255,255,255,.08);
+  z-index:1;
+  transition:
+    transform .8s cubic-bezier(.22,.68,0,1.15),
+    background-color .6s ease,
+    box-shadow .6s ease;
+}
+.dn-moons-hole{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  opacity:1;
+  transition:transform .8s ease,opacity .4s ease;
+}
+.dn-moon-hole{
+  position:absolute;
+  border-radius:50%;
+  background-color:rgb(135,135,145);
+}
+.dn-moon-hole:nth-child(1){
+  height:5px;
+  width:5px;
+  top:26px;
+  left:20px;
+}
+.dn-moon-hole:nth-child(2){
+  height:10px;
+  width:10px;
+  top:16px;
+  left:7px;
+}
+.dn-moon-hole:nth-child(3){
+  height:4px;
+  width:4px;
+  top:12px;
+  left:21px;
+}
+.dn-stars{
+  position:absolute;
+  inset:0;
+  z-index:0;
+  opacity:1;
+  transform:translateY(0);
+  transition:transform .8s ease,opacity .5s ease;
+}
+.dn-star{
+  position:absolute;
+  display:block;
+  height:auto;
+  fill:#ffffff;
+  opacity:1;
+  animation:dn-star-twinkle 2s infinite ease-in-out;
+}
+.dn-star:nth-child(1){
+  top:5px;
+  right:29px;
+  width:20px;
+  animation-delay:.3s;
+}
+.dn-star:nth-child(2){
+  top:18px;
+  right:9px;
+  width:15px;
+}
+.dn-star:nth-child(3){
+  top:5px;
+  right:15px;
+  width:10px;
+  animation-delay:.6s;
+}
+.dn-star:nth-child(4){
+  top:26px;
+  right:28px;
+  width:12px;
+  animation-delay:.9s;
+}
+.dn-star:nth-child(5){
+  top:2px;
+  right:50px;
+  width:8px;
+  animation-delay:1.2s;
+}
+@keyframes dn-star-twinkle{
+  0%,100%{transform:scale(1);opacity:1}
+  40%{transform:scale(1.2);opacity:.75}
+  80%{transform:scale(.8);opacity:.9}
+}
+.dn-clouds,
+.dn-black-clouds{
+  position:absolute;
+  left:6px;
+  top:0;
+  bottom:0;
+  width:20px;
+  transform:translateX(-55px);
+  transition:transform .9s ease,opacity .7s ease;
+}
+.dn-clouds{
+  z-index:4;
+  opacity:0;
+}
+.dn-black-clouds{
+  z-index:3;
+  opacity:0;
+}
+.dn-black-cloud{
+  position:absolute;
+  width:20px;
+  height:20px;
+  background-color:#555;
+  opacity:.6;
+  border-radius:50%;
+  animation:dn-cloud-move 6s infinite ease-in-out;
+  animation-delay:1s;
+}
+.dn-black-cloud:nth-child(1){top:1px;right:3px}
+.dn-black-cloud:nth-child(2){top:15px;left:9px}
+.dn-black-cloud:nth-child(3){top:20px;left:27px}
+.dn-cloud{
+  position:absolute;
+  width:20px;
+  height:20px;
+  background-color:#ffffff;
+  border-radius:50%;
+  animation:dn-cloud-move 6s infinite ease-in-out;
+}
+.dn-cloud:nth-child(1){top:0;width:21px;height:21px;right:14px}
+.dn-cloud:nth-child(2){top:14px;width:25px;height:25px;right:6px}
+.dn-cloud:nth-child(3){top:28px;width:23px;height:23px;left:4px}
+.dn-cloud:nth-child(4){top:26px;left:20px}
+.dn-cloud:nth-child(5){top:30px;left:30px}
+.dn-cloud:nth-child(6){top:27px;left:46px}
+.dn-cloud:nth-child(7){top:31px;left:58px}
+@keyframes dn-cloud-move{
+  0%,100%{transform:translateX(-32px)}
+  40%{transform:translateX(-36px)}
+  80%{transform:translateX(-28px)}
+}
+/* Checked State = Light Mode (Day) */
+.dn-switch input:checked + .dn-slider{
+  background-color:#62cff0;
+}
+.dn-switch input:checked + .dn-slider::before{
+  transform:translateX(52px);
+  background-color:#ffb32c;
+  box-shadow:0 0 0 5px rgba(255,255,255,.2);
+}
+.dn-switch input:checked + .dn-slider .dn-moons-hole{
+  transform:translateX(52px);
+  opacity:0;
+}
+.dn-switch input:checked + .dn-slider .dn-stars{
+  transform:translateY(-32px);
+  opacity:0;
+}
+.dn-switch input:checked + .dn-slider .dn-black-clouds,
+.dn-switch input:checked + .dn-slider .dn-clouds{
+  transform:translateX(32px);
+  opacity:1;
+}
+@media (prefers-reduced-motion:reduce){
+  .dn-slider,
+  .dn-slider::before,
+  .dn-moons-hole,
+  .dn-stars,
+  .dn-star,
+  .dn-clouds,
+  .dn-black-clouds,
+  .dn-cloud,
+  .dn-black-cloud{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+  }
+}
+@media (forced-colors:active){
+  .dn-switch{border-color:CanvasText}
+  .dn-slider{border:1px solid CanvasText}
+}
+

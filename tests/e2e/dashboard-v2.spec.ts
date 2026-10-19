@@ -51,6 +51,12 @@ for (const vp of VIEWPORTS) {
 
       // V2 engine sets data-theme on <html> from localStorage["sunext-theme"]
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await expect(page.locator("#themeBtn")).toHaveClass(/dn-switch/);
+      if (theme === "light") {
+        await expect(page.locator("#themeToggle")).toBeChecked();
+      } else {
+        await expect(page.locator("#themeToggle")).not.toBeChecked();
+      }
 
       // Hero heading & 6 KPI cards in #v-overview
       await expect(page.locator("#heroH")).toBeVisible();
@@ -152,14 +158,20 @@ test.describe("v2 /tasks — multi-view workspace", () => {
       await expect(btn).toHaveClass(/on/);
     }
 
-    // Theme toggle flips data-theme on <html>
+    // Theme toggle flips data-theme on <html> and updates Day & Night switch state
     const html = page.locator("html");
+    const themeBtn = page.locator("#themeBtn");
     const initialTheme = (await html.getAttribute("data-theme")) ?? "light";
-    await page.locator("#themeBtn").click();
+    await themeBtn.click();
     await expect(html).toHaveAttribute(
       "data-theme",
       initialTheme === "dark" ? "light" : "dark",
     );
+    await expect(themeBtn).toHaveAttribute("data-source", "user");
+
+    // Alt+Click resets back to system preference
+    await themeBtn.click({ modifiers: ["Alt"] });
+    await expect(themeBtn).toHaveAttribute("data-source", "system");
 
     expect(errors, `errors: ${errors.join(" | ")}`).toEqual([]);
   });
