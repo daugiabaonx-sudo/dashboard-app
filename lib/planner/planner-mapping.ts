@@ -10,6 +10,7 @@
 // between UTC-5 and UTC+14.
 
 import type {
+  SxBlocker,
   SxDataset,
   SxEmployee,
   SxHealth,
@@ -23,6 +24,18 @@ import type {
 import type { PlannerMember, PlannerPlanWithGroup, PlannerTask, PlannerTaskPatch } from "./types";
 
 export const PLANNER_UNASSIGNED_ID = "planner-unassigned";
+export const BLOCKED_PLANNER_PREFIX = "[Bị chặn] ";
+
+const BLOCKED_TITLE_RE = /^\s*(?:\[(?:bị\s*chặn|blocked|kẹt)\]|(?:bị\s*chặn|blocked|kẹt)\s*:)\s*/i;
+
+export function isBlockedPlannerTitle(title: string): boolean {
+  return BLOCKED_TITLE_RE.test(title);
+}
+
+export function stripBlockedPlannerPrefix(title: string): string {
+  const stripped = title.replace(BLOCKED_TITLE_RE, "").trim();
+  return stripped || title.trim();
+}
 
 export const ALLOWED_PLANNER_PLAN_TITLES = [
   "Sunext Manage Task",
@@ -75,6 +88,7 @@ const DEADLINE_UTC_TIME = "T05:00:00Z";
 const PROJECT_COLORS = ["#7b2ff2", "#9e83f5", "#17c98b", "#ff7a00", "#8d68df", "#24c6ff", "#ff6170"];
 const PRIORITY_TO_PLANNER: Record<SxPriority, number> = { high: 3, medium: 5, low: 9 };
 export const OVERDUE_BLOCKED_RATIO = 0.3;
+const DAY_MS = 86_400_000;
 
 export interface PlannerSource {
   readonly tenantId: string;
@@ -98,6 +112,10 @@ function vnDay(instant: string | number): string {
   return dayFormatter.format(new Date(instant));
 }
 
+function dayDiffIso(fromIso: string, toIso: string): number {
+  return Math.round((Date.parse(`${toIso}T00:00:00Z`) - Date.parse(`${fromIso}T00:00:00Z`)) / DAY_MS);
+}
+
 const clampPct = (n: number, min = 0, max = 100) => Math.min(max, Math.max(min, Math.round(n)));
 
 export function mapPlannerPriority(priority: number): SxPriority {
@@ -107,6 +125,7 @@ export function mapPlannerPriority(priority: number): SxPriority {
 
 export function mapPlannerStatus(task: PlannerTask, now: number): SxStatus {
   if (task.percentComplete >= 100) return "completed";
+  if (isBlockedPlannerTitle(task.title)) return "blocked";
   if (task.dueDateTime && vnDay(task.dueDateTime) < vnDay(now)) return "overdue";
   return task.percentComplete > 0 ? "in_progress" : "not_started";
 }
@@ -115,7 +134,7 @@ export function mapPlannerTask(task: PlannerTask, now: number): SxTask {
   const assignee = Object.keys(task.assignments ?? {})[0];
   return {
     id: task.id,
-    title: task.title,
+    title: stripBlockedPlannerPrefix(task.title),
     employeeId: assignee ?? PLANNER_UNASSIGNED_ID,
     projectId: task.planId,
     priority: mapPlannerPriority(task.priority),
@@ -177,9 +196,11 @@ function buildEmployees(src: PlannerSource, tasks: readonly SxTask[]): SxEmploye
 function projectHealthOf(planId: string, tasks: readonly SxTask[]): SxProjectHealth {
   const own = tasks.filter((t) => t.projectId === planId);
   const overdue = own.filter((t) => t.status === "overdue").length;
+  const blocked = own.filter((t) => t.status === "blocked").length;
   const deadlines = own.map((t) => t.deadline).filter(Boolean).sort();
   let health: SxHealth = "on_track";
-  if (overdue > 0) health = overdue / own.length >= OVERDUE_BLOCKED_RATIO ? "blocked" : "at_risk";
+  if (blocked > 0 || (overdue > 0 && overdue / own.length >= OVERDUE_BLOCKED_RATIO)) health = "blocked";
+  else if (overdue > 0) health = "at_risk";
   return {
     projectId: planId,
     progress: own.length ? Math.round(own.reduce((s, t) => s + t.progress, 0) / own.length) : 0,
@@ -188,6 +209,94 @@ function projectHealthOf(planId: string, tasks: readonly SxTask[]): SxProjectHea
     tasksTotal: own.length,
     health,
   };
+}
+
+/**
+ * Derives Blocker & Decision records from incomplete Planner tasks:
+ * 1. Explicitly blocked tasks (status === "blocked")
+ * 2. Overdue tasks (status === "overdue")
+ * 3. Unassigned tasks (employeeId === PLANNER_UNASSIGNED_ID)
+ * 4. Tasks due within <= 2 days at 0% progress, or high-priority tasks due within <= 3 days.
+ */
+export function buildPlannerBlockers(tasks: readonly SxTask[], now: number): SxBlocker[] {
+  const todayIso = vnDay(now);
+  const blockers: SxBlocker[] = [];
+
+  for (const t of tasks) {
+    if (t.status === "completed") continue;
+    const isUnassigned = t.employeeId === PLANNER_UNASSIGNED_ID;
+    const daysSinceCreated = t.createdAt ? Math.max(1, dayDiffIso(t.createdAt, todayIso)) : 1;
+    const daysUntilDue = t.deadline ? dayDiffIso(todayIso, t.deadline) : Number.POSITIVE_INFINITY;
+
+    if (t.status === "blocked") {
+      const days = t.deadline && daysUntilDue < 0 ? Math.max(1, -daysUntilDue) : daysSinceCreated;
+      blockers.push({
+        id: `blk-${t.id}`,
+        taskId: t.id,
+        issue: `Bị chặn: ${t.title}`,
+        severity: "high",
+        daysBlocked: days,
+        actionRequired: isUnassigned ? "Assign" : "Escalate",
+        taskTitle: t.title,
+        employeeId: t.employeeId,
+        projectId: t.projectId,
+        status: "open",
+      });
+      continue;
+    }
+
+    if (t.status === "overdue") {
+      const daysOverdue = t.deadline ? Math.max(1, -daysUntilDue) : 1;
+      blockers.push({
+        id: `blk-${t.id}`,
+        taskId: t.id,
+        issue: `Trễ hạn: ${t.title}`,
+        severity: t.priority === "high" || daysOverdue >= 3 ? "high" : "medium",
+        daysBlocked: daysOverdue,
+        actionRequired: isUnassigned ? "Assign" : "Escalate",
+        taskTitle: t.title,
+        employeeId: t.employeeId,
+        projectId: t.projectId,
+        status: "open",
+      });
+      continue;
+    }
+
+    if (isUnassigned) {
+      blockers.push({
+        id: `blk-${t.id}`,
+        taskId: t.id,
+        issue: `Chưa giao phụ trách: ${t.title}`,
+        severity: t.priority === "high" ? "high" : "medium",
+        daysBlocked: daysSinceCreated,
+        actionRequired: "Assign",
+        taskTitle: t.title,
+        employeeId: t.employeeId,
+        projectId: t.projectId,
+        status: "open",
+      });
+      continue;
+    }
+
+    const isSoonTodo = t.status === "not_started" && daysUntilDue >= 0 && daysUntilDue <= 2;
+    const isSoonHigh = t.priority === "high" && daysUntilDue >= 0 && daysUntilDue <= 3;
+    if (isSoonTodo || isSoonHigh) {
+      blockers.push({
+        id: `blk-${t.id}`,
+        taskId: t.id,
+        issue: isSoonTodo ? `Sát hạn chưa bắt đầu: ${t.title}` : `Ưu tiên cao sát hạn: ${t.title}`,
+        severity: t.priority === "high" || daysUntilDue === 0 ? "high" : "medium",
+        daysBlocked: Math.max(1, 3 - daysUntilDue),
+        actionRequired: "Escalate",
+        taskTitle: t.title,
+        employeeId: t.employeeId,
+        projectId: t.projectId,
+        status: "open",
+      });
+    }
+  }
+
+  return blockers;
 }
 
 export function buildPlannerDataset(src: PlannerSource, now: number): SxDataset {
@@ -209,7 +318,7 @@ export function buildPlannerDataset(src: PlannerSource, now: number): SxDataset 
     employees: buildEmployees(filteredSrc, tasks),
     projects,
     tasks,
-    blockers: [],
+    blockers: buildPlannerBlockers(tasks, now),
     projectHealth: plans.map((p) => projectHealthOf(p.id, tasks)),
     notifications: [],
     projectLinks: Object.fromEntries(plans.map((p) => [p.id, plannerPlanUrl(p.id, src.tenantId)])),
@@ -233,7 +342,14 @@ function percentForStatus(status: SxStatus, progress: number): number {
  * separate task-details resource). Returns null when nothing changed.
  */
 export function plannerPatchFromEdit(original: SxTask, edit: SxTaskEdit): PlannerTaskPatch | null {
-  const patch: { percentComplete?: number; priority?: number; dueDateTime?: string | null } = {};
+  const patch: { title?: string; percentComplete?: number; priority?: number; dueDateTime?: string | null } = {};
+
+  const cleanTitle = stripBlockedPlannerPrefix(original.title);
+  if (edit.status === "blocked" && original.status !== "blocked") {
+    patch.title = `${BLOCKED_PLANNER_PREFIX}${cleanTitle}`.slice(0, 255);
+  } else if (original.status === "blocked" && edit.status !== "blocked") {
+    patch.title = cleanTitle.slice(0, 255);
+  }
 
   const pct =
     edit.status !== original.status ? percentForStatus(edit.status, edit.progress) : clampPct(edit.progress);

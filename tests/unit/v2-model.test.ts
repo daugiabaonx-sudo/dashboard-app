@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SxDataset, SxTask } from "@/lib/sx-dashboard";
-import { buildV2Model, computeTrend, deltaOf, snapshotAt, v2StatusOf, type V2Task } from "@/lib/v2/v2-model";
+import { buildV2Model, computeTrend, deltaOf, deriveV2Blockers, snapshotAt, v2StatusOf, type V2Task } from "@/lib/v2/v2-model";
 
 const TODAY = new Date(2026, 9, 13); // 13/10/2026 local
 
@@ -240,5 +240,24 @@ describe("computeTrend", () => {
     const trend = computeTrend([v2()], TODAY, 1);
     expect(trend.spark.total).toEqual([1]);
     expect(trend.delta.total).toEqual(["0%", ""]);
+  });
+});
+
+describe("deriveV2Blockers", () => {
+  it("derives blockers dynamically from filtered tasks and removes completed tasks", () => {
+    const tasks: V2Task[] = [
+      v2({ id: "T-001", pid: "p1", title: "Kẹt duyệt", status: "blocked", project: "Sunext Manage Task", owner: "Bao Dau" }),
+      v2({ id: "T-002", pid: "p2", title: "Quá hạn", status: "working", deadline: "2026-10-10", project: "DEV Manage Task", owner: "Bao Dau", risk: "high" }),
+      v2({ id: "T-003", pid: "p3", title: "Chưa ai nhận", status: "todo", owner: "Chưa giao", project: "Marketing Manage Task" }),
+      v2({ id: "T-004", pid: "p4", title: "Sát hạn 0%", status: "todo", progress: 0, deadline: "2026-10-14", project: "Marketing Manage Task", owner: "My Nguyen" }),
+      v2({ id: "T-005", pid: "p5", title: "Đã xong", status: "done", progress: 100, deadline: "2026-10-01", project: "Sunext Manage Task" }),
+    ];
+    const blockers = deriveV2Blockers(tasks, TODAY);
+    expect(blockers.map((b) => [b.id, b.sev, b.action, b.project])).toEqual([
+      ["blk-p1", "high", "Escalate", "Sunext Manage Task"],
+      ["blk-p2", "high", "Escalate", "DEV Manage Task"],
+      ["blk-p3", "medium", "Assign", "Marketing Manage Task"],
+      ["blk-p4", "medium", "Escalate", "Marketing Manage Task"],
+    ]);
   });
 });

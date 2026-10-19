@@ -8,13 +8,16 @@ import {
   ALLOWED_PLANNER_PLAN_TITLES,
   EXCLUDED_PLANNER_PLAN_TITLES,
   PLANNER_UNASSIGNED_ID,
+  buildPlannerBlockers,
   buildPlannerDataset,
   filterPlannerPlans,
+  isBlockedPlannerTitle,
   mapPlannerPriority,
   mapPlannerStatus,
   mapPlannerTask,
   plannerPatchFromEdit,
   plannerPlanUrl,
+  stripBlockedPlannerPrefix,
   type PlannerSource,
 } from "@/lib/planner/planner-mapping";
 import type { PlannerTask } from "@/lib/planner/types";
@@ -101,10 +104,21 @@ describe("mapPlannerPriority", () => {
 });
 
 describe("mapPlannerStatus", () => {
-  it("100% is completed even when past due", () => {
+  it("100% is completed even when past due or prefixed with [Bị chặn]", () => {
     expect(mapPlannerStatus(task({ percentComplete: 100, dueDateTime: "2026-01-01T00:00:00Z" }), NOW)).toBe(
       "completed",
     );
+    expect(mapPlannerStatus(task({ title: "[Bị chặn] Done task", percentComplete: 100 }), NOW)).toBe(
+      "completed",
+    );
+  });
+
+  it("recognizes [Bị chặn], [BLOCKED], and [KẸT] prefixes as blocked when incomplete", () => {
+    expect(isBlockedPlannerTitle("[Bị chặn] Chờ duyệt")).toBe(true);
+    expect(isBlockedPlannerTitle("[BLOCKED] Waiting API")).toBe(true);
+    expect(isBlockedPlannerTitle("Bị chặn: Thiếu tài khoản")).toBe(true);
+    expect(stripBlockedPlannerPrefix("[Bị chặn] Chờ duyệt")).toBe("Chờ duyệt");
+    expect(mapPlannerStatus(task({ title: "[Bị chặn] Chờ duyệt", percentComplete: 50 }), NOW)).toBe("blocked");
   });
 
   it("past Vietnam calendar day is overdue", () => {
@@ -250,8 +264,11 @@ describe("buildPlannerDataset", () => {
     expect(plan2).toMatchObject({ tasksDone: 0, tasksTotal: 1, health: "on_track" });
   });
 
-  it("has no blockers or notifications (Planner has no such concepts)", () => {
-    expect(ds.blockers).toEqual([]);
+  it("derives blockers from overdue and unassigned tasks while notifications remain empty", () => {
+    expect(ds.blockers.map((b) => [b.taskId, b.actionRequired])).toEqual([
+      ["t2", "Escalate"],
+      ["t3", "Assign"],
+    ]);
     expect(ds.notifications).toEqual([]);
   });
 
@@ -295,6 +312,41 @@ describe("buildPlannerDataset", () => {
   });
 });
 
+describe("buildPlannerBlockers", () => {
+  const baseTask: SxTask = {
+    id: "t1",
+    title: "Thiết kế landing page",
+    employeeId: U1,
+    projectId: "plan1",
+    priority: "medium",
+    status: "in_progress",
+    progress: 50,
+    deadline: "2026-10-20",
+    notes: "",
+    createdAt: "2026-10-01",
+  };
+
+  it("creates blockers for blocked, overdue, unassigned, and due-soon at-risk tasks", () => {
+    const tasks: SxTask[] = [
+      { ...baseTask, id: "done-1", status: "completed", progress: 100 },
+      { ...baseTask, id: "blk-1", status: "blocked", title: "Chờ khách duyệt" },
+      { ...baseTask, id: "late-1", status: "overdue", deadline: "2026-10-03", priority: "high" },
+      { ...baseTask, id: "unassigned-1", employeeId: PLANNER_UNASSIGNED_ID, status: "not_started", progress: 0 },
+      { ...baseTask, id: "soon-todo", status: "not_started", progress: 0, deadline: "2026-10-08" },
+      { ...baseTask, id: "soon-high", status: "in_progress", progress: 50, priority: "high", deadline: "2026-10-09" },
+      { ...baseTask, id: "safe-working", status: "in_progress", progress: 50, deadline: "2026-10-25" },
+    ];
+    const blockers = buildPlannerBlockers(tasks, NOW);
+    expect(blockers.map((b) => [b.taskId, b.severity, b.actionRequired])).toEqual([
+      ["blk-1", "high", "Escalate"],
+      ["late-1", "high", "Escalate"],
+      ["unassigned-1", "medium", "Assign"],
+      ["soon-todo", "medium", "Escalate"],
+      ["soon-high", "high", "Escalate"],
+    ]);
+  });
+});
+
 describe("plannerPatchFromEdit", () => {
   const base: SxTask = {
     id: "t1",
@@ -318,6 +370,21 @@ describe("plannerPatchFromEdit", () => {
     expect(plannerPatchFromEdit(base, { ...edit, status: "not_started" })).toEqual({ percentComplete: 0 });
     expect(plannerPatchFromEdit({ ...base, status: "not_started", progress: 0 }, { ...edit, status: "in_progress", progress: 0 })).toEqual({
       percentComplete: 1,
+    });
+  });
+
+  it("prefixes [Bị chặn] in title when status changes to blocked, and strips it when leaving blocked", () => {
+    expect(plannerPatchFromEdit(base, { ...edit, status: "blocked" })).toEqual({
+      title: "[Bị chặn] Task",
+    });
+    expect(
+      plannerPatchFromEdit(
+        { ...base, status: "blocked", title: "Task" },
+        { ...edit, status: "in_progress", progress: 50 },
+      ),
+    ).toEqual({
+      title: "Task",
+      percentComplete: 50,
     });
   });
 

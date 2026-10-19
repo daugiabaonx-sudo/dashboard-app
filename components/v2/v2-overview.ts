@@ -7,7 +7,7 @@
 //   * the modal saves to Microsoft Planner (read-only without edit rights);
 //   * the bell lists real notifications, the profile shows the session user.
 
-import { computeTrend, type V2Status, type V2Task } from "@/lib/v2/v2-model";
+import { computeTrend, deriveV2Blockers, type V2Status, type V2Task } from "@/lib/v2/v2-model";
 import type { V2Ctx, V2View } from "./v2-context";
 import {
   HMAP,
@@ -253,9 +253,13 @@ export function renderProjects(ctx: V2Ctx) {
   ctx.after();
 }
 
-export function renderBlockers(ctx: V2Ctx) {
+export function renderBlockers(ctx: V2Ctx, filteredList?: readonly V2Task[]) {
   const { S, $ } = ctx;
-  const list = ctx.BLOCKERS.filter((b) => S.project === "all" || b.project === S.project);
+  const tasks = filteredList ?? ctx.filtered();
+  const list =
+    ctx.TASKS.length > 0
+      ? deriveV2Blockers(tasks, ctx.h.TODAY)
+      : ctx.BLOCKERS.filter((b) => S.project === "all" || b.project === S.project);
   const get = (b: (typeof list)[number], k: string) => ({ issue: b.issue, sev: SEV[b.sev][2], days: b.days, action: b.action })[k] ?? "";
   const data = sortBy(list, S.bSort.key, S.bSort.dir, get);
   $("blkCount").textContent = list.length + " đang mở";
@@ -289,7 +293,7 @@ export function renderOverview(ctx: V2Ctx, list: V2Task[]) {
   renderTasks(ctx, list);
   renderHealth(ctx, list);
   renderProjects(ctx);
-  renderBlockers(ctx);
+  renderBlockers(ctx, list);
 }
 
 /* ------------------------------- Modal -------------------------------- */

@@ -61,6 +61,8 @@ for (const vp of VIEWPORTS) {
       await expect(page.locator("#h-health")).toContainText("Sức khỏe tiến độ");
       await expect(page.locator("#h-att")).toContainText("Công việc cần chú ý");
       await expect(page.locator("#h-blk")).toContainText("Blocker & Decision");
+      await expect(page.locator("#blkCount")).toContainText("đang mở");
+      await expect(page.locator("#bHead")).toContainText("Vấn đề");
 
       await page.waitForTimeout(300);
 

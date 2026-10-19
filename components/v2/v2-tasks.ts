@@ -306,12 +306,19 @@ export function installTasks(ctx: V2Ctx) {
       ctx.toast("Chỉ Owner, Admin hoặc Manager được đổi trạng thái công việc.", "warning");
       return;
     }
-    if (key === "blocked") {
-      ctx.toast("Microsoft Planner không có trạng thái “Bị chặn” — chưa thể chuyển sang cột này.", "warning");
-      return;
-    }
     const status = key as V2Status;
-    const progress = status === "done" ? 100 : status === "todo" ? 0 : t.progress === 100 || t.progress === 0 ? 50 : t.progress;
+    const progress =
+      status === "done"
+        ? 100
+        : status === "todo"
+          ? 0
+          : status === "blocked"
+            ? t.progress === 100
+              ? 50
+              : t.progress
+            : t.progress === 100 || t.progress === 0
+              ? 50
+              : t.progress;
     const before = { status: t.status, progress: t.progress };
     applySaved(ctx, id, status, progress);
     ctx.render.all();

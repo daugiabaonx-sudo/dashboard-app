@@ -188,6 +188,89 @@ export function buildV2Model(ds: SxDataset, today: Date): V2Model {
   };
 }
 
+function dayDiffIso(fromIso: string, toIso: string): number {
+  return Math.round((Date.parse(`${toIso}T00:00:00Z`) - Date.parse(`${fromIso}T00:00:00Z`)) / DAY_MS);
+}
+
+/**
+ * Dynamically derives V2Blocker rows from the currently filtered V2Task list,
+ * so the Blocker & Decision card stays synchronized with Team / Project /
+ * Period / Search filters and live Kanban / Modal edits.
+ */
+export function deriveV2Blockers(tasks: readonly V2Task[], today: Date): V2Blocker[] {
+  const todayIso = isoDay(today);
+  const blockers: V2Blocker[] = [];
+
+  for (const t of tasks) {
+    if (t.status === "done") continue;
+    const isUnassigned = t.owner === "Chưa giao";
+    const daysSinceStart = Math.max(1, dayDiffIso(t.createdAt ?? t.start, todayIso));
+    const daysUntilDue = t.deadline ? dayDiffIso(todayIso, t.deadline) : Number.POSITIVE_INFINITY;
+    const isHighRisk = t.risk === "high" || t.risk === "critical";
+
+    if (t.status === "blocked") {
+      const days = t.deadline && daysUntilDue < 0 ? Math.max(1, -daysUntilDue) : daysSinceStart;
+      blockers.push({
+        id: `blk-${t.pid}`,
+        issue: `Bị chặn: ${t.title}`,
+        project: t.project,
+        sev: "high",
+        days,
+        action: isUnassigned ? "Assign" : "Escalate",
+        owner: t.owner,
+        detail: `Ảnh hưởng công việc: ${t.title} (${t.id})`,
+      });
+      continue;
+    }
+
+    if (t.deadline && daysUntilDue < 0) {
+      const daysOverdue = Math.max(1, -daysUntilDue);
+      blockers.push({
+        id: `blk-${t.pid}`,
+        issue: `Trễ hạn: ${t.title}`,
+        project: t.project,
+        sev: isHighRisk || daysOverdue >= 3 ? "high" : "medium",
+        days: daysOverdue,
+        action: isUnassigned ? "Assign" : "Escalate",
+        owner: t.owner,
+        detail: `Ảnh hưởng công việc: ${t.title} (${t.id})`,
+      });
+      continue;
+    }
+
+    if (isUnassigned) {
+      blockers.push({
+        id: `blk-${t.pid}`,
+        issue: `Chưa giao phụ trách: ${t.title}`,
+        project: t.project,
+        sev: isHighRisk ? "high" : "medium",
+        days: daysSinceStart,
+        action: "Assign",
+        owner: t.owner,
+        detail: `Ảnh hưởng công việc: ${t.title} (${t.id})`,
+      });
+      continue;
+    }
+
+    const isSoonTodo = t.status === "todo" && daysUntilDue >= 0 && daysUntilDue <= 2;
+    const isSoonHigh = isHighRisk && daysUntilDue >= 0 && daysUntilDue <= 3;
+    if (isSoonTodo || isSoonHigh) {
+      blockers.push({
+        id: `blk-${t.pid}`,
+        issue: isSoonTodo ? `Sát hạn chưa bắt đầu: ${t.title}` : `Ưu tiên cao sát hạn: ${t.title}`,
+        project: t.project,
+        sev: isHighRisk || daysUntilDue === 0 ? "high" : "medium",
+        days: Math.max(1, 3 - daysUntilDue),
+        action: "Escalate",
+        owner: t.owner,
+        detail: `Ảnh hưởng công việc: ${t.title} (${t.id})`,
+      });
+    }
+  }
+
+  return blockers;
+}
+
 /* ------------------------------------------------------------------ */
 /* KPI history (sparklines + week-over-week deltas)                    */
 /* ------------------------------------------------------------------ */
