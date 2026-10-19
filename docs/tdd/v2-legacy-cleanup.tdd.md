@@ -1,7 +1,7 @@
 # TDD evidence: V2 root layout cleanup, dead UI component removal & E2E alignment
 
 **Source plan:** inline `/plan` in session (2026-10-19), approved "Yes".
-**Commits:** `2a2c82c` (RED) → GREEN checkpoint commit.
+**Commits:** `2a2c82c` (RED) → `58a0d14` (GREEN). No refactor commit needed.
 
 ## User journeys
 
