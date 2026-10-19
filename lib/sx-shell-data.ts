@@ -2,11 +2,24 @@
 // Props for the dashboard shell (sidebar + topbar), derived from the
 // signed-in session and the Microsoft Planner dataset only.
 
-import type { SxShellProps } from "@/components/sunext/sx-shell";
 import { canEditPlanner, roleLabel } from "@/lib/auth/permissions";
-import { taskTeamOf, type SxDataset } from "@/lib/sx-dashboard";
+import { taskTeamOf, type SxDataset, type SxNotification } from "@/lib/sx-dashboard";
 
-export type SxShellData = Omit<SxShellProps, "children">;
+export interface SxProfile {
+  userId: string;
+  name: string;
+  initials: string;
+  roleLabel: string;
+}
+
+export interface SxShellData {
+  profile: SxProfile;
+  notifications: SxNotification[];
+  teams: string[];
+  projects: string[];
+  /** Owner / Admin / Manager may edit Planner tasks; others are read-only. */
+  canEdit: boolean;
+}
 
 /** Signed-in identity (subset of lib/auth/session#Session). */
 export interface SxShellIdentity {

@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { QueryProvider } from "@/hooks/query-client";
-import { RealtimeSubscriptions } from "@/components/realtime/subscriptions";
 import "./globals.css";
 
 const inter = Inter({
@@ -37,10 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${inter.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <QueryProvider>
-          <RealtimeSubscriptions />
-          <ThemeProvider>{children}</ThemeProvider>
-        </QueryProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );
