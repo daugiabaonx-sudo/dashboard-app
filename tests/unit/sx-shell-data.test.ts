@@ -2,9 +2,13 @@
 // The dashboard shell (sidebar + topbar) is derived from the signed-in session
 // and the Planner dataset only — no demo users, teams or notifications.
 
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildSxShell } from "@/lib/sx-shell-data";
 import type { SxDataset } from "@/lib/sx-dashboard";
+
+const ROOT_DIR = resolve(__dirname, "../..");
 
 const DS: SxDataset = {
   source: "planner",
@@ -70,5 +74,72 @@ describe("buildSxShell", () => {
     const shell = buildSxShell({ userId: "u", email: "", fullName: "X" }, empty, null);
     expect(shell.teams).toEqual([]);
     expect(shell.projects).toEqual([]);
+  });
+});
+
+describe("V2 layout & legacy cleanup contract", () => {
+  it("app/layout.tsx does not mount QueryProvider or RealtimeSubscriptions", () => {
+    const layoutSrc = readFileSync(resolve(ROOT_DIR, "app/layout.tsx"), "utf8");
+    expect(layoutSrc).not.toContain("QueryProvider");
+    expect(layoutSrc).not.toContain("RealtimeSubscriptions");
+    expect(layoutSrc).not.toContain("@/hooks/query-client");
+    expect(layoutSrc).not.toContain("@/components/realtime/subscriptions");
+    expect(layoutSrc).toContain("<ThemeProvider>{children}</ThemeProvider>");
+  });
+
+  it("lib/sx-shell-data.ts defines SxProfile and SxShellData without importing from components/sunext", () => {
+    const shellDataSrc = readFileSync(resolve(ROOT_DIR, "lib/sx-shell-data.ts"), "utf8");
+    expect(shellDataSrc).not.toContain("@/components/sunext");
+    expect(shellDataSrc).toContain("export interface SxProfile");
+    expect(shellDataSrc).toContain("export interface SxShellData");
+  });
+
+  it("removes unreferenced legacy UI component directories and dead lib/sx-page-data.ts", () => {
+    const removedPaths = [
+      "lib/sx-page-data.ts",
+      "app/(dashboard)/_components",
+      "components/sunext",
+      "components/layout",
+      "components/tasks",
+      "components/reports",
+      "components/calendar",
+      "components/realtime",
+      "components/ui",
+      "hooks",
+    ];
+    for (const relPath of removedPaths) {
+      expect(existsSync(resolve(ROOT_DIR, relPath)), `${relPath} should be removed`).toBe(false);
+    }
+  });
+
+  it("removes obsolete legacy E2E specs while keeping V2 and auth/security specs", () => {
+    const removedE2e = [
+      "tests/e2e/animated-table.spec.ts",
+      "tests/e2e/calendar.spec.ts",
+      "tests/e2e/dashboard.spec.ts",
+      "tests/e2e/i18n-cleanup.spec.ts",
+      "tests/e2e/locale-switcher.spec.ts",
+      "tests/e2e/navigation.spec.ts",
+      "tests/e2e/realtime-cross-tab.spec.ts",
+      "tests/e2e/realtime-invalidation.spec.ts",
+      "tests/e2e/states.spec.ts",
+      "tests/e2e/task-modal.spec.ts",
+      "tests/e2e/tasks.spec.ts",
+      "tests/e2e/_helpers/locale.ts",
+    ];
+    for (const relPath of removedE2e) {
+      expect(existsSync(resolve(ROOT_DIR, relPath)), `${relPath} should be removed`).toBe(false);
+    }
+
+    const keptE2e = [
+      "tests/e2e/auth.spec.ts",
+      "tests/e2e/auth-realmode.spec.ts",
+      "tests/e2e/auth.setup.ts",
+      "tests/e2e/dashboard-v2.spec.ts",
+      "tests/e2e/security-headers.spec.ts",
+    ];
+    for (const relPath of keptE2e) {
+      expect(existsSync(resolve(ROOT_DIR, relPath)), `${relPath} should exist`).toBe(true);
+    }
   });
 });

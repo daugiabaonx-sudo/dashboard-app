@@ -71,27 +71,15 @@ test.describe("Auth flow", () => {
   });
 
   test("header sign-out button returns to /login", async ({ page }) => {
-    // Sign in first — in real mode there's no proxy auto-login, so going
-    // straight to "/" lands on /login and the Header is never mounted.
-    // The beforeEach already cleared cookies, so we go through the login
-    // form (not the inherited session).
     await signInAs(page, TEST_USERS.owner.email, TEST_USERS.owner.password);
 
-    // Land on a dashboard page so the Header (which contains the sign-out
-    // button) is actually mounted.
     await page.goto("/");
-    await expect(page.locator("main").first()).toBeVisible();
+    await expect(page.locator("#app")).toBeVisible();
 
-    // On narrow viewports the user-name block hides but the avatar/sign-out
-    // button remains in the header.
-    await page
-      .locator("header")
-      .getByRole("button", { name: /sign out/i })
-      .click();
+    // Open V2 profile menu and trigger sign-out.
+    await page.locator("#profBtn").click();
+    await page.locator('#profMenu button[data-prof="logout"]').click();
 
-    // The header uses router.push + router.refresh — that may be a soft
-    // client-side navigation, so wait on the URL directly rather than
-    // pinning to a navigation event.
     await expect(page).toHaveURL(/\/login$/, { timeout: 10_000 });
     await expect(
       page.getByText("SUNEXT Operations"),
