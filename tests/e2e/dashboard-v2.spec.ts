@@ -133,6 +133,17 @@ test.describe("v2 /tasks — multi-view workspace", () => {
     await expect(page.locator("#secPjContainer h1")).toContainText("Dự án");
     await expect(page.locator("#tvBody")).toBeVisible();
 
+    const pjStrip = page.locator("#pjStrip");
+    await expect(pjStrip).toContainText("Tất cả dự án");
+    await expect(pjStrip).not.toContainText("To do list");
+    await expect(pjStrip).not.toContainText("General Tasks");
+    await expect(pjStrip).not.toContainText("Test 1");
+    if ((await pjStrip.locator(".pj-pill").count()) > 1) {
+      await expect(pjStrip).toContainText("Sunext Manage Task");
+      await expect(pjStrip).toContainText("DEV Manage Task");
+      await expect(pjStrip).toContainText("Marketing Manage Task");
+    }
+
     for (const mode of ["kanban", "list", "gantt", "cards", "table"] as const) {
       const btn = page.locator(`#tvType button[data-vt="${mode}"]`);
       await btn.click();

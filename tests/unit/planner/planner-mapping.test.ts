@@ -5,8 +5,11 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  ALLOWED_PLANNER_PLAN_TITLES,
+  EXCLUDED_PLANNER_PLAN_TITLES,
   PLANNER_UNASSIGNED_ID,
   buildPlannerDataset,
+  filterPlannerPlans,
   mapPlannerPriority,
   mapPlannerStatus,
   mapPlannerTask,
@@ -39,6 +42,49 @@ function task(overrides: Partial<PlannerTask> = {}): PlannerTask {
     ...overrides,
   };
 }
+
+describe("filterPlannerPlans", () => {
+  it("exports the exact allowed and excluded plan lists", () => {
+    expect(ALLOWED_PLANNER_PLAN_TITLES).toEqual([
+      "Sunext Manage Task",
+      "DEV Manage Task",
+      "Marketing Manage Task",
+    ]);
+    expect(EXCLUDED_PLANNER_PLAN_TITLES).toEqual([
+      "test",
+      "To do list",
+      "General Tasks",
+      "Test 1",
+    ]);
+  });
+
+  it("removes test, To do list, General Tasks, and Test 1 and keeps only the 3 active plans in canonical order", () => {
+    const rawPlans = [
+      { id: "p-test", title: "test", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-todo", title: "To do list", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-gen", title: "General Tasks", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-mkt", title: "Marketing Manage Task", groupId: "g3", groupName: "Marketing" },
+      { id: "p-test1", title: "Test 1", groupId: "g2", groupName: "3 - Tech" },
+      { id: "p-dev", title: "DEV Manage Task", groupId: "g2", groupName: "3 - Tech" },
+      { id: "p-sx", title: "Sunext Manage Task", groupId: "g1", groupName: "1 - Company" },
+    ];
+    expect(filterPlannerPlans(rawPlans).map((p) => p.title)).toEqual([
+      "Sunext Manage Task",
+      "DEV Manage Task",
+      "Marketing Manage Task",
+    ]);
+  });
+
+  it("returns empty array when all plans are in the excluded list (case-insensitive and trimmed)", () => {
+    const legacyOnly = [
+      { id: "1", title: " TEST " },
+      { id: "2", title: "to do list" },
+      { id: "3", title: "General Tasks " },
+      { id: "4", title: "test 1" },
+    ];
+    expect(filterPlannerPlans(legacyOnly)).toEqual([]);
+  });
+});
 
 describe("mapPlannerPriority", () => {
   it.each([
@@ -212,6 +258,40 @@ describe("buildPlannerDataset", () => {
   it("omits the unassigned employee when every task is assigned", () => {
     const only = buildPlannerDataset({ ...src, tasks: [src.tasks[0]] }, NOW);
     expect(only.employees.map((e) => e.id)).toEqual([U1]);
+  });
+
+  it("excludes legacy plans (test, To do list, General Tasks, Test 1) and their tasks from the dataset", () => {
+    const mixed: PlannerSource = {
+      tenantId: "tid",
+      plans: [
+        { id: "p-test", title: "test", groupId: "g1", groupName: "1 - Company" },
+        { id: "p-todo", title: "To do list", groupId: "g1", groupName: "1 - Company" },
+        { id: "p-gen", title: "General Tasks", groupId: "g1", groupName: "1 - Company" },
+        { id: "p-sx", title: "Sunext Manage Task", groupId: "g1", groupName: "1 - Company" },
+        { id: "p-test1", title: "Test 1", groupId: "g2", groupName: "3 - Tech" },
+        { id: "p-dev", title: "DEV Manage Task", groupId: "g2", groupName: "3 - Tech" },
+        { id: "p-mkt", title: "Marketing Manage Task", groupId: "g3", groupName: "Marketing" },
+      ],
+      tasks: [
+        task({ id: "t-old-1", planId: "p-test" }),
+        task({ id: "t-old-2", planId: "p-todo" }),
+        task({ id: "t-old-3", planId: "p-gen" }),
+        task({ id: "t-old-4", planId: "p-test1" }),
+        task({ id: "t-sx", planId: "p-sx", assignments: { [U1]: {} } }),
+        task({ id: "t-dev", planId: "p-dev", assignments: { [U1]: {} } }),
+        task({ id: "t-mkt", planId: "p-mkt", assignments: { [U2]: {} } }),
+      ],
+      members: src.members,
+    };
+    const filteredDs = buildPlannerDataset(mixed, NOW);
+    expect(filteredDs.projects.map((p) => p.name)).toEqual([
+      "Sunext Manage Task",
+      "DEV Manage Task",
+      "Marketing Manage Task",
+    ]);
+    expect(filteredDs.tasks.map((t) => t.id)).toEqual(["t-sx", "t-dev", "t-mkt"]);
+    expect(Object.keys(filteredDs.projectLinks ?? {})).toEqual(["p-sx", "p-dev", "p-mkt"]);
+    expect(Object.keys(filteredDs.taskEtags ?? {})).toEqual(["t-sx", "t-dev", "t-mkt"]);
   });
 });
 

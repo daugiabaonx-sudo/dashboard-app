@@ -125,6 +125,26 @@ describe("GET /api/planner/plans", () => {
     expect(res.status).toBe(403);
     expect((res.json as { error: string }).error).toMatch(/admin consent/);
   });
+
+  it("filters out test, To do list, General Tasks, and Test 1 and keeps only the 3 active plans", async () => {
+    vi.stubEnv("PLANNER_GROUP_ID", "");
+    vi.mocked(listAllPlans).mockResolvedValue([
+      { id: "p-test", title: "test", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-todo", title: "To do list", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-gen", title: "General Tasks", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-sx", title: "Sunext Manage Task", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-test1", title: "Test 1", groupId: "g2", groupName: "3 - Tech" },
+      { id: "p-dev", title: "DEV Manage Task", groupId: "g2", groupName: "3 - Tech" },
+      { id: "p-mkt", title: "Marketing Manage Task", groupId: "g3", groupName: "Marketing" },
+    ]);
+    const res = await callRoute(handler);
+    expect(res.status).toBe(200);
+    expect((res.json as Array<{ title: string }>).map((p) => p.title)).toEqual([
+      "Sunext Manage Task",
+      "DEV Manage Task",
+      "Marketing Manage Task",
+    ]);
+  });
 });
 
 describe("GET /api/planner/plans/:planId/tasks", () => {

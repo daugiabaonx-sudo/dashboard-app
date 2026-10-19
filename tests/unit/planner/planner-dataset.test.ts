@@ -117,6 +117,25 @@ describe("loadPlannerSource", () => {
     expect(src.users).toEqual([]);
     expect(src.tasks).toHaveLength(3);
   });
+
+  it("excludes test, To do list, General Tasks, and Test 1 before fetching plan tasks", async () => {
+    vi.mocked(listAllPlans).mockResolvedValue([
+      { id: "p-test", title: "test", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-todo", title: "To do list", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-gen", title: "General Tasks", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-sx", title: "Sunext Manage Task", groupId: "g1", groupName: "1 - Company" },
+      { id: "p-test1", title: "Test 1", groupId: "g2", groupName: "3 - Tech" },
+      { id: "p-dev", title: "DEV Manage Task", groupId: "g2", groupName: "3 - Tech" },
+      { id: "p-mkt", title: "Marketing Manage Task", groupId: "g3", groupName: "Marketing" },
+    ]);
+    const src = await loadPlannerSource();
+    expect(src.plans.map((p) => p.title)).toEqual([
+      "Sunext Manage Task",
+      "DEV Manage Task",
+      "Marketing Manage Task",
+    ]);
+    expect(vi.mocked(listPlanTasks).mock.calls.map(([id]) => id)).toEqual(["p-sx", "p-dev", "p-mkt"]);
+  });
 });
 
 describe("loadPlannerDataset", () => {

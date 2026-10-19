@@ -11,7 +11,12 @@ import "server-only";
 import type { SxDataset } from "@/lib/sx-dashboard";
 import { mapInBatches } from "./batch";
 import { readPlannerConfig } from "./config";
-import { buildPlannerDataset, PLANNER_UNASSIGNED_ID, type PlannerSource } from "./planner-mapping";
+import {
+  buildPlannerDataset,
+  filterPlannerPlans,
+  PLANNER_UNASSIGNED_ID,
+  type PlannerSource,
+} from "./planner-mapping";
 import {
   GROUP_BATCH_SIZE,
   getUsersByIds,
@@ -61,7 +66,7 @@ async function lookupUsers(ids: readonly string[]): Promise<readonly PlannerMemb
 
 async function fetchSource(): Promise<PlannerSource> {
   const { tenantId } = readPlannerConfig();
-  const plans = await listAllPlans();
+  const plans = filterPlannerPlans(await listAllPlans());
   const groupIds = [...new Set(plans.map((p) => p.groupId))];
   const [taskLists, memberLists] = await Promise.all([
     mapInBatches(plans, GROUP_BATCH_SIZE, (p) => listPlanTasks(p.id)),

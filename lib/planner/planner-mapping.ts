@@ -24,6 +24,52 @@ import type { PlannerMember, PlannerPlanWithGroup, PlannerTask, PlannerTaskPatch
 
 export const PLANNER_UNASSIGNED_ID = "planner-unassigned";
 
+export const ALLOWED_PLANNER_PLAN_TITLES = [
+  "Sunext Manage Task",
+  "DEV Manage Task",
+  "Marketing Manage Task",
+] as const;
+
+export const EXCLUDED_PLANNER_PLAN_TITLES = [
+  "test",
+  "To do list",
+  "General Tasks",
+  "Test 1",
+] as const;
+
+const normalizePlanTitle = (title: string): string => title.trim().toLowerCase();
+
+const ALLOWED_TITLE_ORDER = new Map<string, number>(
+  ALLOWED_PLANNER_PLAN_TITLES.map((title, index) => [normalizePlanTitle(title), index]),
+);
+
+const EXCLUDED_TITLES = new Set<string>(
+  EXCLUDED_PLANNER_PLAN_TITLES.map(normalizePlanTitle),
+);
+
+/**
+ * Filters out legacy/test plans (test, To do list, General Tasks, Test 1)
+ * and, when any of the 3 active SUNEXT plans are present, keeps only
+ * Sunext Manage Task, DEV Manage Task, and Marketing Manage Task in order.
+ */
+export function filterPlannerPlans<T extends { readonly title: string }>(
+  plans: readonly T[],
+): T[] {
+  const nonExcluded = plans.filter((p) => {
+    const normalized = normalizePlanTitle(p.title);
+    return normalized.length > 0 && !EXCLUDED_TITLES.has(normalized);
+  });
+  const allowedMatches = nonExcluded.filter((p) =>
+    ALLOWED_TITLE_ORDER.has(normalizePlanTitle(p.title)),
+  );
+  if (allowedMatches.length === 0) return nonExcluded;
+  return [...allowedMatches].sort(
+    (a, b) =>
+      (ALLOWED_TITLE_ORDER.get(normalizePlanTitle(a.title)) ?? 0) -
+      (ALLOWED_TITLE_ORDER.get(normalizePlanTitle(b.title)) ?? 0),
+  );
+}
+
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 const DEADLINE_UTC_TIME = "T05:00:00Z";
 const PROJECT_COLORS = ["#7b2ff2", "#9e83f5", "#17c98b", "#ff7a00", "#8d68df", "#24c6ff", "#ff6170"];
@@ -145,25 +191,30 @@ function projectHealthOf(planId: string, tasks: readonly SxTask[]): SxProjectHea
 }
 
 export function buildPlannerDataset(src: PlannerSource, now: number): SxDataset {
-  const projects: SxProject[] = src.plans.map((p, i) => ({
+  const plans = filterPlannerPlans(src.plans);
+  const allowedPlanIds = new Set(plans.map((p) => p.id));
+  const rawTasks = src.plans.length > 0 ? src.tasks.filter((t) => allowedPlanIds.has(t.planId)) : src.tasks;
+  const filteredSrc: PlannerSource = { ...src, plans, tasks: rawTasks };
+
+  const projects: SxProject[] = plans.map((p, i) => ({
     id: p.id,
     name: p.title,
     color: PROJECT_COLORS[i % PROJECT_COLORS.length],
     group: p.groupName,
   }));
-  const tasks = src.tasks.map((t) => mapPlannerTask(t, now));
+  const tasks = rawTasks.map((t) => mapPlannerTask(t, now));
 
   return {
     source: "planner",
-    employees: buildEmployees(src, tasks),
+    employees: buildEmployees(filteredSrc, tasks),
     projects,
     tasks,
     blockers: [],
-    projectHealth: src.plans.map((p) => projectHealthOf(p.id, tasks)),
+    projectHealth: plans.map((p) => projectHealthOf(p.id, tasks)),
     notifications: [],
-    projectLinks: Object.fromEntries(src.plans.map((p) => [p.id, plannerPlanUrl(p.id, src.tenantId)])),
+    projectLinks: Object.fromEntries(plans.map((p) => [p.id, plannerPlanUrl(p.id, src.tenantId)])),
     taskEtags: Object.fromEntries(
-      src.tasks.filter((t) => t["@odata.etag"]).map((t) => [t.id, t["@odata.etag"] as string]),
+      rawTasks.filter((t) => t["@odata.etag"]).map((t) => [t.id, t["@odata.etag"] as string]),
     ),
   };
 }

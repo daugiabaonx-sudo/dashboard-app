@@ -7,6 +7,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { listAllPlans, listGroupPlans } from "@/lib/planner/planner-api";
+import { filterPlannerPlans } from "@/lib/planner/planner-mapping";
 import { plannerErrorResponse } from "@/lib/planner/route-errors";
 
 
@@ -15,7 +16,8 @@ export async function GET(request: NextRequest) {
   const groupId =
     request.nextUrl.searchParams.get("groupId")?.trim() || process.env.PLANNER_GROUP_ID?.trim();
   try {
-    const plans = groupId ? await listGroupPlans(groupId) : await listAllPlans();
+    const rawPlans = groupId ? await listGroupPlans(groupId) : await listAllPlans();
+    const plans = filterPlannerPlans(rawPlans);
     return NextResponse.json(plans);
   } catch (e: unknown) {
     return plannerErrorResponse(e, "planner.plans");

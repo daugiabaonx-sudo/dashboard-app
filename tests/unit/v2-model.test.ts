@@ -149,11 +149,11 @@ describe("buildV2Model", () => {
           { id: "thu", name: "Thu Nguyen", initials: "TN", role: "—", team: "Marketing", avatar: "avatar-2" },
         ],
         projects: [
-          { id: "todo", name: "To do list", color: "#000", group: "1 - Company" },
+          { id: "sx", name: "Sunext Manage Task", color: "#000", group: "1 - Company" },
           { id: "mkt", name: "Marketing Manage Task", color: "#000", group: "Marketing" },
         ],
         tasks: [
-          task({ id: "ai-news", employeeId: "my", projectId: "todo" }),
+          task({ id: "ai-news", employeeId: "my", projectId: "sx" }),
           task({ id: "lam-sach", employeeId: "my", projectId: "mkt" }),
           task({ id: "to-khai", employeeId: "thu", projectId: "mkt" }),
         ],
