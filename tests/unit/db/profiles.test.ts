@@ -69,6 +69,29 @@ describe("profiles", () => {
       });
     });
 
+    it("normalizes legacy Nguyen Minh Anh profile row to Admin (AD)", async () => {
+      chain.__setResult({
+        data: [
+          {
+            id: "00000000-0000-0000-0000-00000000000a",
+            email: "minhanh@sunext.io",
+            full_name: "Nguyen Minh Anh",
+            initials: "MA",
+            avatar_color: "#6366f1",
+            department: "Leadership",
+            role: "owner",
+            capacity_hours: 32,
+            joined_at: "2024-01-15",
+          },
+        ],
+        error: null,
+      });
+
+      const [user] = await listProfiles();
+      expect(user?.name).toBe("Admin");
+      expect(user?.initials).toBe("AD");
+    });
+
     it("returns an empty array when data is null", async () => {
       chain.__setResult({ data: null, error: null });
       const users = await listProfiles();

@@ -54,7 +54,7 @@ if (!SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const USERS = [
-  { id: "00000000-0000-0000-0000-00000000000a", email: "minhanh@sunext.io",   full_name: "Nguyen Minh Anh",  initials: "MA" },
+  { id: "00000000-0000-0000-0000-00000000000a", email: "minhanh@sunext.io",   full_name: "Admin",            initials: "AD" },
   { id: "00000000-0000-0000-0000-00000000000b", email: "quocbao@sunext.io",   full_name: "Tran Quoc Bao",    initials: "QB" },
   { id: "00000000-0000-0000-0000-00000000000c", email: "phuong.le@sunext.io", full_name: "Le Hoang Phuong",  initials: "LP" },
   { id: "00000000-0000-0000-0000-00000000000d", email: "thanhdat@sunext.io",  full_name: "Pham Thanh Dat",   initials: "TD" },

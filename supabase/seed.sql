@@ -17,7 +17,7 @@ on conflict (id) do nothing;
 
 -- ----- Profiles (deterministic UUIDs u1..u8) -----
 insert into public.profiles (id, email, full_name, initials, avatar_color, department, role, capacity_hours, joined_at) values
-  ('00000000-0000-0000-0000-00000000000a', 'minhanh@sunext.io',    'Nguyen Minh Anh',  'MA', '#6366f1', 'Leadership',  'owner',   32, '2024-01-15'),
+  ('00000000-0000-0000-0000-00000000000a', 'minhanh@sunext.io',    'Admin',            'AD', '#6366f1', 'Leadership',  'owner',   32, '2024-01-15'),
   ('00000000-0000-0000-0000-00000000000b', 'quocbao@sunext.io',    'Tran Quoc Bao',     'QB', '#8b5cf6', 'Engineering', 'admin',   40, '2024-02-20'),
   ('00000000-0000-0000-0000-00000000000c', 'phuong.le@sunext.io',  'Le Hoang Phuong',   'LP', '#06b6d4', 'Product',     'manager', 40, '2024-03-05'),
   ('00000000-0000-0000-0000-00000000000d', 'thanhdat@sunext.io',   'Pham Thanh Dat',    'TD', '#10b981', 'Engineering', 'member',  40, '2024-04-12'),

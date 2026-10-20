@@ -317,8 +317,8 @@ function buildProfile(scope: DashboardScope): DashboardProfile {
   const user = findUser(scope.userId);
   return {
     userId: scope.userId,
-    name: user?.name ?? "Minh Anh",
-    initials: user?.initials ?? "MA",
+    name: user?.name ?? "Admin",
+    initials: user?.initials ?? "AD",
     role: scope.role,
     avatarColor: user?.avatarColor ?? "#6366f1",
   };

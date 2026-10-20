@@ -12,11 +12,11 @@ import type {
 export const users: User[] = [
   {
     id: "u1",
-    name: "Nguyen Minh Anh",
+    name: "Admin",
     email: "minhanh@sunext.io",
     role: "owner",
     avatarColor: "#6366f1",
-    initials: "MA",
+    initials: "AD",
     department: "Leadership",
     joinedAt: "2024-01-15",
     capacityHours: 32,

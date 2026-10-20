@@ -35,7 +35,7 @@ insert into auth.users (
   raw_user_meta_data, is_super_admin, created_at, updated_at
 ) values
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-00000000000a', 'authenticated', 'authenticated', 'minhanh@sunext.io',
-   jsonb_build_object('full_name','Nguyen Minh Anh','initials','MA'),
+   jsonb_build_object('full_name','Admin','initials','AD'),
    false, now(), now()),
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-00000000000b', 'authenticated', 'authenticated', 'quocbao@sunext.io',
    jsonb_build_object('full_name','Tran Quoc Bao','initials','QB'),

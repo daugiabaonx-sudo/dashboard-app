@@ -143,7 +143,13 @@ describe("V2 Blocker & Decision human-raised UI integration", () => {
       },
     });
 
-    // 1. Overdue task T-002 appears in Attention card (#tBody) but NOT in Blocker card (#bBody)
+    // 1. Topbar profile button shows initials + name without a role sub-label (#profRole)
+    expect(host.querySelector("#profAva")?.textContent).toBe("BD");
+    expect(host.querySelector("#profName")?.textContent).toBe("Bao Dau");
+    expect(host.querySelector("#profRole")).toBeNull();
+    expect(host.querySelector("#profBtn")?.textContent?.trim()).toBe("BDBao Dau");
+
+    // 2. Overdue task T-002 appears in Attention card (#tBody) but NOT in Blocker card (#bBody)
     expect(host.querySelector("#tBody")?.textContent).toContain("Update skill research");
     expect(host.querySelector("#bHead")?.textContent).toContain("Công việc");
     expect(host.querySelector("#bHead")?.textContent).toContain("Người phụ trách");

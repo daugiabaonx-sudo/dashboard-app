@@ -31,15 +31,24 @@ export interface SxShellIdentity {
 /** Employee team value used for Planner's "unassigned" placeholder. */
 const NO_TEAM = "—";
 
+const LEGACY_ADMIN_NAMES = new Set(["nguyen minh anh", "minh anh"]);
+
 function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const trimmed = name.trim();
+  if (trimmed.toLowerCase() === "admin") return "AD";
+  const parts = trimmed.split(/\s+/).filter(Boolean);
   const letters = parts.length > 1 ? [parts[0][0], parts[parts.length - 1][0]] : [parts[0]?.[0] ?? "?"];
   return letters.join("").toUpperCase();
 }
 
 /** Session full name, falling back to the e-mail's local part. */
 export function displayName(identity: SxShellIdentity): string {
-  return identity.fullName.trim() || identity.email.split("@")[0] || "Người dùng";
+  const raw = identity.fullName.trim();
+  if (raw && LEGACY_ADMIN_NAMES.has(raw.toLowerCase())) return "Admin";
+  if (identity.email.trim().toLowerCase() === "minhanh@sunext.io" && (!raw || raw.toLowerCase() === "minhanh")) {
+    return "Admin";
+  }
+  return raw || identity.email.split("@")[0] || "Người dùng";
 }
 
 /** @param role the user's profile role (lib/auth/role#getUserRole); null = unknown, read-only. */

@@ -35,6 +35,20 @@ describe("buildSxShell", () => {
     expect(shell.canEdit).toBe(true);
   });
 
+  it("normalizes legacy Nguyen Minh Anh identity to Admin (AD)", () => {
+    const shell = buildSxShell(
+      { userId: "00000000-0000-0000-0000-00000000000a", email: "minhanh@sunext.io", fullName: "Nguyen Minh Anh" },
+      DS,
+      "manager",
+    );
+    expect(shell.profile).toEqual({
+      userId: "00000000-0000-0000-0000-00000000000a",
+      name: "Admin",
+      initials: "AD",
+      roleLabel: "Manager",
+    });
+  });
+
   it("is read-only for members and when the role is unknown", () => {
     const member = buildSxShell({ userId: "u", email: "", fullName: "X" }, DS, "member");
     expect(member.canEdit).toBe(false);

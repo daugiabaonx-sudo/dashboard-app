@@ -17,14 +17,20 @@ interface ProfileRow {
   joined_at: string;
 }
 
+function isLegacyAdmin(row: ProfileRow): boolean {
+  const name = (row.full_name ?? "").trim().toLowerCase();
+  return name === "nguyen minh anh" || name === "minh anh";
+}
+
 function toUser(row: ProfileRow): User {
+  const admin = isLegacyAdmin(row);
   return {
     id: row.id,
-    name: row.full_name,
+    name: admin ? "Admin" : row.full_name,
     email: row.email,
     role: row.role as User["role"],
     avatarColor: row.avatar_color,
-    initials: row.initials,
+    initials: admin ? "AD" : row.initials,
     department: row.department,
     joinedAt: row.joined_at,
     capacityHours: row.capacity_hours,

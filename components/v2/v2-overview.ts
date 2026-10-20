@@ -95,7 +95,6 @@ function renderHeads(ctx: V2Ctx) {
   // Profile (session) + bell (Planner & Decision notifications).
   $("profAva").textContent = profile.initials;
   $("profName").textContent = profile.name;
-  $("profRole").textContent = profile.roleLabel;
   renderBell(ctx);
 }
 
