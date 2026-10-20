@@ -189,7 +189,9 @@ export function mapPlannerTask(
     progress: clampPct(task.percentComplete),
     deadline: task.dueDateTime ? vnDay(task.dueDateTime) : "",
     notes: (notes ?? "").trim(),
-    ...(task.createdDateTime ? { createdAt: vnDay(task.createdDateTime) } : {}),
+    ...(task.createdDateTime
+      ? { createdAt: vnDay(task.createdDateTime), createdDateTime: task.createdDateTime }
+      : {}),
     ...(task.completedDateTime ? { completedAt: vnDay(task.completedDateTime) } : {}),
   };
 }

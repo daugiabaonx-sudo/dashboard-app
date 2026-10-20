@@ -140,6 +140,16 @@ export function mountV2(root: HTMLElement, opts: V2MountOptions): () => void {
     if (view !== S.view) showView(ctx, view);
   });
 
+  // Live ticker: refresh "Đã chờ" wait-age badges every 30s when running with real clock.
+  if (!opts.now) {
+    const tickId = setInterval(() => {
+      if (!alive) return;
+      ctx.now = new Date();
+      renderBlockers(ctx);
+    }, 30_000);
+    disposers.push(() => clearInterval(tickId));
+  }
+
   return () => {
     alive = false;
     disposers.splice(0).forEach((d) => d());

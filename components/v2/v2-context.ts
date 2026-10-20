@@ -91,7 +91,7 @@ export interface V2Ctx {
   readonly PROJECTS: readonly V2Project[];
   readonly BLOCKERS: readonly V2Blocker[];
   readonly h: V2Helpers;
-  readonly now: Date;
+  now: Date;
   readonly S: V2State;
   readonly canEdit: boolean;
   readonly canRaise: boolean;

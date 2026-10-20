@@ -321,7 +321,7 @@ export function renderBlockers(ctx: V2Ctx, filteredList?: readonly V2Task[]) {
     ({
       issue: r.taskTitle.toLowerCase(),
       unblocker: r.unblockerName.toLowerCase(),
-      wait: r.wait.hours,
+      wait: r.wait.minutes ?? r.wait.hours * 60,
       action: r.kind === "request" ? (r.canResolve ? "0" : "1") : "2",
     })[k] ?? "";
   const data = sortBy(tabRows, S.bSort.key, S.bSort.dir, get);

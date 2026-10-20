@@ -35,6 +35,8 @@ export interface V2Task {
   readonly notes?: string;
   /** YYYY-MM-DD (Planner) — used for KPI history. */
   readonly createdAt?: string;
+  /** Exact ISO 8601 creation timestamp (Planner) — used for real-time wait age. */
+  readonly createdDateTime?: string;
   readonly completedAt?: string;
 }
 
@@ -146,6 +148,7 @@ export function buildV2Model(ds: SxDataset, today: Date): V2Model {
     progress: Math.max(0, Math.min(100, Math.round(t.progress))),
     ...(t.notes ? { notes: t.notes } : {}),
     ...(t.createdAt ? { createdAt: t.createdAt } : {}),
+    ...(t.createdDateTime ? { createdDateTime: t.createdDateTime } : {}),
     ...(t.completedAt ? { completedAt: t.completedAt } : {}),
   }));
 

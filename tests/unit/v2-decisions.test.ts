@@ -73,24 +73,40 @@ const REQ_1: DecisionRequest = {
 };
 
 describe("waitAge", () => {
-  it("classifies <24h as fresh, 24-48h as warn, and >=48h as stale", () => {
-    expect(waitAge("2026-10-20T11:45:00.000Z", NOW)).toEqual({
+  it("classifies <24h as fresh (with minute precision), 24-48h as warn, and >=48h as stale", () => {
+    expect(waitAge("2026-10-20T11:59:30.000Z", NOW)).toEqual({
       hours: 0,
+      minutes: 0,
       tone: "fresh",
       label: "Vừa báo",
     });
+    expect(waitAge("2026-10-20T11:45:00.000Z", NOW)).toEqual({
+      hours: 0,
+      minutes: 15,
+      tone: "fresh",
+      label: "15p chờ",
+    });
+    expect(waitAge("2026-10-20T10:40:00.000Z", NOW)).toEqual({
+      hours: 1,
+      minutes: 80,
+      tone: "fresh",
+      label: "1h 20p chờ",
+    });
     expect(waitAge("2026-10-20T06:00:00.000Z", NOW)).toEqual({
       hours: 6,
+      minutes: 360,
       tone: "fresh",
       label: "6h chờ",
     });
     expect(waitAge("2026-10-19T06:00:00.000Z", NOW)).toEqual({
       hours: 30,
+      minutes: 1800,
       tone: "warn",
       label: "1d 6h chờ",
     });
     expect(waitAge("2026-10-18T12:00:00.000Z", NOW)).toEqual({
       hours: 48,
+      minutes: 2880,
       tone: "stale",
       label: "2d chờ",
     });
@@ -175,6 +191,8 @@ describe("buildDecisionRows, filterRowsByTab & tabCounts", () => {
           team: "1 - Company",
           project: "Sunext Manage Task",
           start: "2026-10-20",
+          createdAt: "2026-10-20",
+          createdDateTime: "2026-10-20T11:42:00.000Z",
           deadline: "2026-10-22",
           risk: "medium",
           status: "blocked",
@@ -196,6 +214,7 @@ describe("buildDecisionRows, filterRowsByTab & tabCounts", () => {
     expect(blockedUnassigned?.typeLabel).toBe("Bị chặn trên Planner");
     expect(blockedUnassigned?.need).toBe("chưa tìm được link");
     expect(blockedUnassigned?.unblockerName).toBe("Chưa giao");
+    expect(blockedUnassigned?.wait.label).toBe("18p chờ");
 
     expect(rowsWithoutReq.find((r) => r.id === "unassigned-p-unassigned")?.unblockerName).toBe("Chưa giao");
   });

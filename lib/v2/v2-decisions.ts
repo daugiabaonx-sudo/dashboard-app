@@ -12,6 +12,7 @@ export type V2WaitTone = "fresh" | "warn" | "stale";
 
 export interface V2WaitAge {
   readonly hours: number;
+  readonly minutes?: number;
   readonly tone: V2WaitTone;
   readonly label: string;
 }
@@ -55,6 +56,7 @@ export const DECISION_TYPE_LABELS: Readonly<Record<DecisionType, string>> = {
   technical: "Vướng kỹ thuật",
 };
 
+const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
 const ROLE_PRIORITY: Readonly<Record<UserRole, number>> = {
   owner: 0,
@@ -73,21 +75,26 @@ const ROLE_PRIORITY: Readonly<Record<UserRole, number>> = {
 export function waitAge(createdAtIso: string, now: Date | number): V2WaitAge {
   const nowMs = typeof now === "number" ? now : now.getTime();
   const createdMs = Date.parse(createdAtIso);
-  const hours = Number.isFinite(createdMs)
-    ? Math.max(0, Math.floor((nowMs - createdMs) / HOUR_MS))
-    : 0;
+  const diffMs = Number.isFinite(createdMs) ? Math.max(0, nowMs - createdMs) : 0;
+  const minutes = Math.floor(diffMs / MINUTE_MS);
+  const hours = Math.floor(diffMs / HOUR_MS);
   const tone: V2WaitTone = hours >= 48 ? "stale" : hours >= 24 ? "warn" : "fresh";
 
+  if (minutes < 1) {
+    return { hours: 0, minutes: 0, tone, label: "Vừa báo" };
+  }
   if (hours < 1) {
-    return { hours: 0, tone, label: "Vừa báo" };
+    return { hours: 0, minutes, tone, label: `${minutes}p chờ` };
   }
   if (hours < 24) {
-    return { hours, tone, label: `${hours}h chờ` };
+    const remMins = minutes % 60;
+    const label = remMins > 0 ? `${hours}h ${remMins}p chờ` : `${hours}h chờ`;
+    return { hours, minutes, tone, label };
   }
   const days = Math.floor(hours / 24);
   const remHours = hours % 24;
   const label = remHours > 0 ? `${days}d ${remHours}h chờ` : `${days}d chờ`;
-  return { hours, tone, label };
+  return { hours, minutes, tone, label };
 }
 
 /**
@@ -170,7 +177,11 @@ export function buildDecisionRows(input: BuildDecisionRowsInput): V2DecisionRow[
   }
 
   // Sort human-raised requests by longest waiting first.
-  rows.sort((a, b) => b.wait.hours - a.wait.hours || a.id.localeCompare(b.id));
+  rows.sort(
+    (a, b) =>
+      (b.wait.minutes ?? b.wait.hours * 60) - (a.wait.minutes ?? a.wait.hours * 60) ||
+      a.id.localeCompare(b.id),
+  );
 
   // Append virtual rows for Planner-blocked or unassigned incomplete tasks that don't already have an open request.
   for (const t of tasks) {
@@ -179,7 +190,7 @@ export function buildDecisionRows(input: BuildDecisionRowsInput): V2DecisionRow[
 
     const isBlocked = t.status === "blocked";
     const isUnassigned = t.owner === "Chưa giao";
-    const createdIso = `${t.createdAt ?? t.start}T00:00:00.000Z`;
+    const createdIso = t.createdDateTime ?? `${t.createdAt ?? t.start}T00:00:00.000Z`;
     const noteText = t.notes?.trim() ?? "";
     rows.push({
       id: isBlocked ? `blocked-${t.pid}` : `unassigned-${t.pid}`,

@@ -47,6 +47,8 @@ export interface SxTask {
   notes: string;
   /** YYYY-MM-DD the task was created (Planner only). */
   createdAt?: string;
+  /** Exact ISO 8601 creation timestamp (Planner only). */
+  createdDateTime?: string;
   /** YYYY-MM-DD the task was completed (Planner only). */
   completedAt?: string;
 }

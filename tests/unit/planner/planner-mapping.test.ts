@@ -172,6 +172,7 @@ describe("mapPlannerTask", () => {
       deadline: "2026-10-07",
       notes: "",
       createdAt: "2026-10-01",
+      createdDateTime: "2026-10-01T00:00:00Z",
     });
   });
 
