@@ -32,6 +32,7 @@ export interface V2Task {
   readonly risk: V2Risk;
   readonly status: V2Status;
   readonly progress: number;
+  readonly notes?: string;
   /** YYYY-MM-DD (Planner) — used for KPI history. */
   readonly createdAt?: string;
   readonly completedAt?: string;
@@ -143,6 +144,7 @@ export function buildV2Model(ds: SxDataset, today: Date): V2Model {
     risk: RISK_OF[t.priority] ?? "medium",
     status: v2StatusOf(t.status),
     progress: Math.max(0, Math.min(100, Math.round(t.progress))),
+    ...(t.notes ? { notes: t.notes } : {}),
     ...(t.createdAt ? { createdAt: t.createdAt } : {}),
     ...(t.completedAt ? { completedAt: t.completedAt } : {}),
   }));

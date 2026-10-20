@@ -13,10 +13,19 @@ vi.mock("@/lib/planner/planner-api", async (importOriginal) => ({
   listPlanTasks: vi.fn(),
   listGroupMembers: vi.fn(),
   getUsersByIds: vi.fn(),
+  getPlanDetails: vi.fn(),
+  getTaskDetails: vi.fn(),
 }));
 
 import { GraphError } from "@/lib/planner/errors";
-import { getUsersByIds, listAllPlans, listGroupMembers, listPlanTasks } from "@/lib/planner/planner-api";
+import {
+  getPlanDetails,
+  getTaskDetails,
+  getUsersByIds,
+  listAllPlans,
+  listGroupMembers,
+  listPlanTasks,
+} from "@/lib/planner/planner-api";
 import {
   invalidatePlannerSource,
   loadPlannerDataset,
@@ -51,6 +60,8 @@ beforeEach(() => {
   vi.mocked(listAllPlans).mockResolvedValue(PLANS);
   vi.mocked(listPlanTasks).mockImplementation(async (planId: string) => [plannerTask(`t-${planId}`, planId)]);
   vi.mocked(listGroupMembers).mockResolvedValue([{ id: "u1", displayName: "A", jobTitle: null, department: null }]);
+  vi.mocked(getPlanDetails).mockResolvedValue({ id: "pd", categoryDescriptions: { category2: "BLOCK" } });
+  vi.mocked(getTaskDetails).mockResolvedValue({ id: "td", description: "chưa tìm được link" });
 });
 
 describe("loadPlannerSource", () => {
@@ -139,10 +150,18 @@ describe("loadPlannerSource", () => {
 });
 
 describe("loadPlannerDataset", () => {
-  it("maps the cached source into a Planner dataset", async () => {
+  it("maps the cached source into a Planner dataset with category labels and task notes", async () => {
+    vi.mocked(listPlanTasks).mockImplementation(async (planId: string) => [
+      {
+        ...plannerTask(`t-${planId}`, planId),
+        appliedCategories: { category2: true },
+      },
+    ]);
     const ds = await loadPlannerDataset();
     expect(ds.source).toBe("planner");
     expect(ds.projects.map((p) => p.id)).toEqual(["p1", "p2", "p3"]);
     expect(ds.tasks).toHaveLength(3);
+    expect(ds.tasks[0]?.status).toBe("blocked");
+    expect(ds.tasks[0]?.notes).toBe("chưa tìm được link");
   });
 });

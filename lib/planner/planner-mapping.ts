@@ -27,9 +27,28 @@ export const PLANNER_UNASSIGNED_ID = "planner-unassigned";
 export const BLOCKED_PLANNER_PREFIX = "[Bị chặn] ";
 
 const BLOCKED_TITLE_RE = /^\s*(?:\[(?:bị\s*chặn|blocked|kẹt)\]|(?:bị\s*chặn|blocked|kẹt)\s*:)\s*/i;
+const BLOCKED_CATEGORY_RE = /\b(?:block|blocked|bị\s*chặn|kẹt)\b/i;
 
 export function isBlockedPlannerTitle(title: string): boolean {
   return BLOCKED_TITLE_RE.test(title);
+}
+
+/**
+ * Checks whether any active category label on a Planner task matches a
+ * blocked keyword ("BLOCK", "BLOCKED", "Bị chặn", "Kẹt").
+ */
+export function isBlockedPlannerCategory(
+  task: PlannerTask,
+  planCategories?: Readonly<Record<string, string | null>>,
+): boolean {
+  const applied = task.appliedCategories;
+  if (!applied) return false;
+  for (const [key, active] of Object.entries(applied)) {
+    if (!active) continue;
+    const label = planCategories?.[key]?.trim() ?? "";
+    if (BLOCKED_CATEGORY_RE.test(label)) return true;
+  }
+  return false;
 }
 
 export function stripBlockedPlannerPrefix(title: string): string {
@@ -111,6 +130,10 @@ export interface PlannerSource {
   readonly members: Readonly<Record<string, readonly PlannerMember[]>>;
   /** Assignees looked up by id (User.Read.All) when member lists lack their name. */
   readonly users?: readonly PlannerMember[];
+  /** planId → categoryDescriptions (category1..category25 → label text). */
+  readonly planCategories?: Readonly<Record<string, Readonly<Record<string, string | null>>>>;
+  /** taskId → task details description (Notes field in Teams Planner). */
+  readonly taskNotes?: Readonly<Record<string, string>>;
 }
 
 const dayFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -136,14 +159,25 @@ export function mapPlannerPriority(priority: number): SxPriority {
   return priority <= 7 ? "medium" : "low";
 }
 
-export function mapPlannerStatus(task: PlannerTask, now: number): SxStatus {
+export function mapPlannerStatus(
+  task: PlannerTask,
+  now: number,
+  planCategories?: Readonly<Record<string, string | null>>,
+): SxStatus {
   if (task.percentComplete >= 100) return "completed";
-  if (isBlockedPlannerTitle(task.title)) return "blocked";
+  if (isBlockedPlannerTitle(task.title) || isBlockedPlannerCategory(task, planCategories)) {
+    return "blocked";
+  }
   if (task.dueDateTime && vnDay(task.dueDateTime) < vnDay(now)) return "overdue";
   return task.percentComplete > 0 ? "in_progress" : "not_started";
 }
 
-export function mapPlannerTask(task: PlannerTask, now: number): SxTask {
+export function mapPlannerTask(
+  task: PlannerTask,
+  now: number,
+  planCategories?: Readonly<Record<string, string | null>>,
+  notes?: string,
+): SxTask {
   const assignee = Object.keys(task.assignments ?? {})[0];
   return {
     id: task.id,
@@ -151,10 +185,10 @@ export function mapPlannerTask(task: PlannerTask, now: number): SxTask {
     employeeId: assignee ?? PLANNER_UNASSIGNED_ID,
     projectId: task.planId,
     priority: mapPlannerPriority(task.priority),
-    status: mapPlannerStatus(task, now),
+    status: mapPlannerStatus(task, now, planCategories),
     progress: clampPct(task.percentComplete),
     deadline: task.dueDateTime ? vnDay(task.dueDateTime) : "",
-    notes: "",
+    notes: (notes ?? "").trim(),
     ...(task.createdDateTime ? { createdAt: vnDay(task.createdDateTime) } : {}),
     ...(task.completedDateTime ? { completedAt: vnDay(task.completedDateTime) } : {}),
   };
@@ -288,7 +322,14 @@ export function buildPlannerDataset(src: PlannerSource, now: number): SxDataset 
     color: PROJECT_COLORS[i % PROJECT_COLORS.length],
     group: p.groupName,
   }));
-  const tasks = rawTasks.map((t) => mapPlannerTask(t, now));
+  const tasks = rawTasks.map((t) =>
+    mapPlannerTask(
+      t,
+      now,
+      src.planCategories?.[t.planId],
+      src.taskNotes?.[t.id],
+    ),
+  );
 
   return {
     source: "planner",

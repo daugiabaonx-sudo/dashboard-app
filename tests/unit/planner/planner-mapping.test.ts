@@ -12,6 +12,7 @@ import {
   buildPlannerBlockers,
   buildPlannerDataset,
   filterPlannerPlans,
+  isBlockedPlannerCategory,
   isBlockedPlannerTitle,
   mapPlannerPriority,
   mapPlannerStatus,
@@ -120,6 +121,20 @@ describe("mapPlannerStatus", () => {
     expect(isBlockedPlannerTitle("Bị chặn: Thiếu tài khoản")).toBe(true);
     expect(stripBlockedPlannerPrefix("[Bị chặn] Chờ duyệt")).toBe("Chờ duyệt");
     expect(mapPlannerStatus(task({ title: "[Bị chặn] Chờ duyệt", percentComplete: 50 }), NOW)).toBe("blocked");
+  });
+
+  it("recognizes Planner category labels named BLOCK / BLOCKED / BỊ CHẶN via appliedCategories", () => {
+    const categories = { category1: "DESIGN", category2: "BLOCK" };
+    const t = task({
+      title: "Tes1 des ui",
+      percentComplete: 0,
+      appliedCategories: { category1: true, category2: true },
+    });
+    expect(isBlockedPlannerCategory(t, categories)).toBe(true);
+    expect(mapPlannerStatus(t, NOW, categories)).toBe("blocked");
+    const mapped = mapPlannerTask(t, NOW, categories, "chưa tìm được link");
+    expect(mapped.status).toBe("blocked");
+    expect(mapped.notes).toBe("chưa tìm được link");
   });
 
   it("past Vietnam calendar day is overdue", () => {

@@ -70,8 +70,21 @@ export interface PlannerTask {
   readonly createdDateTime: string;
   readonly completedDateTime: string | null;
   readonly assignments: Readonly<Record<string, PlannerAssignment>>;
+  readonly appliedCategories?: Readonly<Record<string, boolean>>;
   readonly checklistItemCount?: number;
   readonly activeChecklistItemCount?: number;
+  readonly "@odata.etag"?: string;
+}
+
+export interface PlannerPlanDetails {
+  readonly id?: string;
+  readonly categoryDescriptions?: Readonly<Record<string, string | null>>;
+  readonly "@odata.etag"?: string;
+}
+
+export interface PlannerTaskDetails {
+  readonly id?: string;
+  readonly description?: string | null;
   readonly "@odata.etag"?: string;
 }
 

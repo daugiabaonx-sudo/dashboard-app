@@ -22,8 +22,10 @@ import {
   type PlannerGroup,
   type PlannerMember,
   type PlannerPlan,
+  type PlannerPlanDetails,
   type PlannerPlanWithGroup,
   type PlannerTask,
+  type PlannerTaskDetails,
   type PlannerTaskPatch,
 } from "./types";
 
@@ -137,6 +139,13 @@ export async function getPlan(planId: string): Promise<PlannerPlan> {
   return data;
 }
 
+export async function getPlanDetails(planId: string): Promise<PlannerPlanDetails> {
+  const { data } = await graphRequest<PlannerPlanDetails>(
+    `/planner/plans/${plannerPathId(planId, "planId")}/details`,
+  );
+  return data;
+}
+
 export function listPlanBuckets(planId: string): Promise<PlannerBucket[]> {
   return graphList<PlannerBucket>(`/planner/plans/${plannerPathId(planId, "planId")}/buckets`);
 }
@@ -148,6 +157,13 @@ export function listPlanTasks(planId: string): Promise<PlannerTask[]> {
 export async function getTask(taskId: string): Promise<PlannerTask> {
   const { data } = await graphRequest<PlannerTask>(
     `/planner/tasks/${plannerPathId(taskId, "taskId")}`,
+  );
+  return data;
+}
+
+export async function getTaskDetails(taskId: string): Promise<PlannerTaskDetails> {
+  const { data } = await graphRequest<PlannerTaskDetails>(
+    `/planner/tasks/${plannerPathId(taskId, "taskId")}/details`,
   );
   return data;
 }

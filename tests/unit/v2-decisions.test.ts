@@ -161,15 +161,42 @@ describe("buildDecisionRows, filterRowsByTab & tabCounts", () => {
     expect(isManagerOrAbove("member")).toBe(false);
 
     // When a Planner task is blocked without a DecisionRequest, use its owner as unblockerName
+    // and prefer task.notes from Teams Planner as `need`
     const rowsWithoutReq = buildDecisionRows({
       requests: [],
-      tasks: TASKS,
+      tasks: [
+        { ...TASKS[0]!, notes: "chưa tìm được link" },
+        TASKS[1]!,
+        {
+          id: "T-003",
+          pid: "p-blk-unassigned",
+          title: "Tes1 des ui",
+          owner: "Chưa giao",
+          team: "1 - Company",
+          project: "Sunext Manage Task",
+          start: "2026-10-20",
+          deadline: "2026-10-22",
+          risk: "medium",
+          status: "blocked",
+          progress: 0,
+          notes: "chưa tìm được link",
+        },
+      ],
       members: MEMBERS,
       currentUserId: "u-mgr",
       canEdit: true,
       now: NOW,
     });
-    expect(rowsWithoutReq.find((r) => r.id === "blocked-p-1")?.unblockerName).toBe("Hanh Nguyen");
-    expect(rowsWithoutReq.find((r) => r.id === "unassigned-p-unassigned")?.unblockerName).toBe("Quản lý");
+    const blockedOwned = rowsWithoutReq.find((r) => r.id === "blocked-p-1");
+    expect(blockedOwned?.unblockerName).toBe("Hanh Nguyen");
+    expect(blockedOwned?.need).toBe("chưa tìm được link");
+    expect(blockedOwned?.typeLabel).toBe("Bị chặn trên Planner");
+
+    const blockedUnassigned = rowsWithoutReq.find((r) => r.id === "blocked-p-blk-unassigned");
+    expect(blockedUnassigned?.typeLabel).toBe("Bị chặn trên Planner");
+    expect(blockedUnassigned?.need).toBe("chưa tìm được link");
+    expect(blockedUnassigned?.unblockerName).toBe("Chưa giao");
+
+    expect(rowsWithoutReq.find((r) => r.id === "unassigned-p-unassigned")?.unblockerName).toBe("Chưa giao");
   });
 });

@@ -12,7 +12,9 @@ import {
   createTask,
   deleteTask,
   getPlan,
+  getPlanDetails,
   getTask,
+  getTaskDetails,
   getUsersByIds,
   listAllPlans,
   listGroupPlans,
@@ -117,8 +119,12 @@ describe("planner-api reads", () => {
     await listPlanBuckets("plan_1");
     expect(lastCall().url).toBe(`${GRAPH_BASE}/planner/plans/plan_1/buckets`);
     expect(await getPlan("plan_1")).toMatchObject({ id: "z" });
+    expect(await getPlanDetails("plan_1")).toMatchObject({ id: "z" });
+    expect(lastCall().url).toBe(`${GRAPH_BASE}/planner/plans/plan_1/details`);
     expect(await getTask("task-1")).toMatchObject({ id: "z" });
     expect(lastCall().url).toBe(`${GRAPH_BASE}/planner/tasks/task-1`);
+    expect(await getTaskDetails("task-1")).toMatchObject({ id: "z" });
+    expect(lastCall().url).toBe(`${GRAPH_BASE}/planner/tasks/task-1/details`);
   });
 
   it("rejects ids that could alter the URL path", async () => {

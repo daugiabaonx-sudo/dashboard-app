@@ -172,15 +172,17 @@ export function buildDecisionRows(input: BuildDecisionRowsInput): V2DecisionRow[
   // Sort human-raised requests by longest waiting first.
   rows.sort((a, b) => b.wait.hours - a.wait.hours || a.id.localeCompare(b.id));
 
-  // Append "Cần phân công" virtual rows for unassigned incomplete tasks that don't already have an open request.
+  // Append virtual rows for Planner-blocked or unassigned incomplete tasks that don't already have an open request.
   for (const t of tasks) {
     if (t.status === "done" || requestTaskIds.has(t.pid)) continue;
     if (t.owner !== "Chưa giao" && t.status !== "blocked") continue;
 
+    const isBlocked = t.status === "blocked";
     const isUnassigned = t.owner === "Chưa giao";
     const createdIso = `${t.createdAt ?? t.start}T00:00:00.000Z`;
+    const noteText = t.notes?.trim() ?? "";
     rows.push({
-      id: isUnassigned ? `unassigned-${t.pid}` : `blocked-${t.pid}`,
+      id: isBlocked ? `blocked-${t.pid}` : `unassigned-${t.pid}`,
       kind: "unassigned",
       plannerTaskId: t.pid,
       taskCode: t.id,
@@ -188,14 +190,16 @@ export function buildDecisionRows(input: BuildDecisionRowsInput): V2DecisionRow[
       orphaned: false,
       project: t.project,
       type: "unassigned",
-      typeLabel: isUnassigned ? "Cần phân công" : "Bị chặn trên Planner",
-      need: isUnassigned
-        ? `Chưa giao phụ trách: ${t.title}`
-        : `Đang đánh dấu [Bị chặn] trên Planner: ${t.title}`,
+      typeLabel: isBlocked ? "Bị chặn trên Planner" : "Cần phân công",
+      need:
+        noteText ||
+        (isBlocked
+          ? `Đang đánh dấu [Bị chặn] trên Planner: ${t.title}`
+          : `Chưa giao phụ trách: ${t.title}`),
       raisedById: "",
       raisedByName: "Hệ thống Planner",
       unblockerId: "",
-      unblockerName: isUnassigned ? "Quản lý" : t.owner,
+      unblockerName: isUnassigned ? "Chưa giao" : t.owner,
       neededBy: t.deadline || null,
       wait: waitAge(createdIso, now),
       isWaitingOnMe: canEdit,

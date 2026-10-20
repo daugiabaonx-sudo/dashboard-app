@@ -273,7 +273,9 @@ export function renderProjects(ctx: V2Ctx) {
 
 function decisionActionCell(r: V2DecisionRow): string {
   if (r.kind === "unassigned") {
-    return pill("p-work", "Assign");
+    return r.unblockerName === "Chưa giao"
+      ? pill("p-work", "Assign")
+      : pill("p-bad", "Escalate");
   }
   if (r.canResolve) {
     return `<button class="chip-btn bk-act-btn pri" type="button" data-bact="resolve" data-bid="${esc(r.id)}">Gỡ xong</button>`;

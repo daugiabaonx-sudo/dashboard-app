@@ -61,3 +61,18 @@ Redesign the **Blocker & Decision** card in Dashboard V2 (`components/v2/*`) aro
   - **MEDIUM (Best Practices):** 0 issues — immutable sorting via `sortBy`, full unit (`66/66` files, `702/702` tests) and E2E coverage.
   - **Validation:** `npx tsc --noEmit` (Pass), `npm run lint` (0 errors), `npm run test:unit` (`702/702` Pass).
 
+---
+
+## 5. Microsoft Teams Planner Sync: `BLOCK` Category Label, Task `Notes` & Assignee Alignment
+
+- **Change:**
+  1. Added `getPlanDetails` (`/planner/plans/{planId}/details`) and `getTaskDetails` (`/planner/tasks/{taskId}/details`) in `lib/planner/planner-api.ts`.
+  2. Added `isBlockedPlannerCategory` in `lib/planner/planner-mapping.ts` so tasks tagged with a Planner category label matching `BLOCK` / `BLOCKED` / `Bị chặn` / `Kẹt` map to `status = "blocked"`.
+  3. Loaded `planCategories` and `taskNotes` in `lib/planner/planner-dataset.ts` (and lowered `CACHE_TTL_MS` from `120_000` to `15_000`), piping `notes` through `SxTask` → `V2Task` → `buildDecisionRows` (`need`).
+  4. Prioritized `t.status === "blocked"` (`"Bị chặn trên Planner"`) ahead of `isUnassigned` in `lib/v2/v2-decisions.ts` and displayed `"Chưa giao"` in `unblockerName` when a task has no assignee in Teams.
+- **Local `/code-review` Report:**
+  - **CRITICAL (Security):** 0 issues — `planId` and `taskId` are validated via `plannerPathId` before URL interpolation; `taskNotes` (`r.need`) is escaped via `esc()` in `v2-overview.ts`.
+  - **HIGH (Code Quality):** 0 issues — individual `getPlanDetails` / `getTaskDetails` failures are caught gracefully without breaking dataset loading; all functions remain `< 50` lines.
+  - **MEDIUM (Best Practices):** 0 issues — immutable data structures preserved; `66/66` test files (`703/703` tests) pass.
+
+
