@@ -1,6 +1,8 @@
 // components/v2/v2-context.ts
 // Shared runtime context of the V2 template engine (see v2-engine.ts).
 
+import type { DecisionRequest, DecisionType } from "@/lib/types";
+import type { V2DecisionMember, V2DecisionTab } from "@/lib/v2/v2-decisions";
 import type { V2Model, V2Project, V2Status, V2Task, V2Blocker } from "@/lib/v2/v2-model";
 import type { V2Helpers, V2SortState } from "./v2-core";
 
@@ -8,6 +10,7 @@ export type V2View = "overview" | "tasks" | "settings";
 export type V2ToastType = "success" | "warning" | "error" | "info";
 
 export interface V2Profile {
+  readonly userId?: string;
   readonly name: string;
   readonly initials: string;
   readonly roleLabel: string;
@@ -17,9 +20,36 @@ export type V2SaveResult =
   | { readonly ok: true; readonly status: V2Status; readonly progress: number }
   | { readonly ok: false; readonly message: string };
 
+export interface V2RaiseInput {
+  readonly plannerTaskId: string;
+  readonly taskTitle: string;
+  readonly projectName: string;
+  readonly type: DecisionType;
+  readonly need: string;
+  readonly unblockerId: string;
+  readonly neededBy: string | null;
+}
+
+export type V2RaiseResult =
+  | { readonly ok: true; readonly request: DecisionRequest; readonly plannerSynced: boolean }
+  | { readonly ok: false; readonly message: string };
+
+export interface V2ResolveInput {
+  readonly action: "resolve" | "cancel";
+  readonly resolution: string;
+}
+
+export type V2ResolveResult =
+  | { readonly ok: true; readonly request: DecisionRequest; readonly plannerSynced: boolean }
+  | { readonly ok: false; readonly message: string };
+
 export interface V2Hooks {
   /** Persist a status/progress change for a Planner task. */
   saveTask(pid: string, change: { status: V2Status; progress: number }): Promise<V2SaveResult>;
+  /** Create a human-raised Blocker & Decision request ("Giơ tay"). */
+  raiseBlocker?(input: V2RaiseInput): Promise<V2RaiseResult>;
+  /** Resolve or cancel an open Blocker & Decision request ("Khép vòng"). */
+  resolveDecision?(id: string, input: V2ResolveInput): Promise<V2ResolveResult>;
   signOut(): Promise<void>;
   /** Reflect the active tab in the URL (no server round-trip). */
   navigate(view: V2View): void;
@@ -37,8 +67,10 @@ export interface V2State {
   pPage: number;
   pSize: number;
   bSort: V2SortState;
+  bTab: V2DecisionTab | null;
   openBk: Set<string>;
   modalId: string | null;
+  resolvingId: string | null;
   saving: boolean;
 }
 
@@ -54,11 +86,15 @@ export interface V2Ctx {
   alive(): boolean;
   readonly model: V2Model;
   TASKS: V2Task[];
+  DECISIONS: DecisionRequest[];
+  readonly MEMBERS: readonly V2DecisionMember[];
   readonly PROJECTS: readonly V2Project[];
   readonly BLOCKERS: readonly V2Blocker[];
   readonly h: V2Helpers;
+  readonly now: Date;
   readonly S: V2State;
   readonly canEdit: boolean;
+  readonly canRaise: boolean;
   readonly profile: V2Profile;
   readonly hooks: V2Hooks;
   readonly render: {
@@ -75,6 +111,7 @@ export interface V2Ctx {
   toast(msg: string, type?: V2ToastType): void;
   filtered(): V2Task[];
   openModal(id: string): void;
+  openRaiseModal(pid?: string): void;
   /** Apply a saved Planner change to the in-memory task list. */
   setStatus(id: string, key: string): void;
 }

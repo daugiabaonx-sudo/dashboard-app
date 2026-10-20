@@ -44,6 +44,9 @@ const nextConfig: NextConfig = {
   // to the client as soon as their fallback is ready. See
   // node_modules/next/dist/docs/01-app/02-guides/migrating-to-cache-components.md.
   cacheComponents: true,
+  experimental: {
+    serverMinification: false,
+  },
   // Next 16 blocks cross-origin requests to dev resources (`/_next/hmr`,
   // etc.) by default. Playwright hits the dev server over `127.0.0.1` while
   // Next binds `localhost`; without this, HMR's WebSocket is rejected and

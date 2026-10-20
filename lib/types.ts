@@ -103,3 +103,32 @@ export interface TeamWorkload {
   overdueTasks: number;
   utilization: number;
 }
+
+export type DecisionType =
+  | "decision"
+  | "waiting_on"
+  | "missing_info"
+  | "missing_resource"
+  | "technical";
+
+export type DecisionStatus = "open" | "resolved" | "cancelled";
+
+export interface DecisionRequest {
+  id: string;
+  workspaceId: string;
+  plannerTaskId: string;
+  taskTitle: string;
+  projectName: string;
+  type: DecisionType;
+  need: string;
+  raisedBy: string;
+  unblockerId: string;
+  neededBy: string | null;
+  status: DecisionStatus;
+  resolution: string | null;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+

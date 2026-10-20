@@ -1,20 +1,26 @@
 // components/v2/v2-overview.ts
 // "Tổng quan" page + shell (sidebar, topbar, modal) of the V2 template —
 // port of Dashboard Sunext V2/index.html lines 1997–2242 wired to real
-// Planner data. Markup/classes are unchanged; differences from the template:
-//   * KPI deltas + sparklines come from lib/v2/v2-model#computeTrend;
-//   * "Sức khỏe tiến độ" is always computed from the filtered tasks;
-//   * the modal saves to Microsoft Planner (read-only without edit rights);
-//   * the bell lists real notifications, the profile shows the session user.
+// Planner data + human-raised Blocker & Decision requests.
 
-import { computeTrend, deriveV2Blockers, type V2Status, type V2Task } from "@/lib/v2/v2-model";
+import type { DecisionType } from "@/lib/types";
+import {
+  buildDecisionRows,
+  defaultDecisionTab,
+  filterRowsByTab,
+  sortUnblockerCandidates,
+  tabCounts,
+  type V2DecisionRow,
+  type V2DecisionTab,
+  type V2WaitTone,
+} from "@/lib/v2/v2-decisions";
+import { computeTrend, type V2Status, type V2Task } from "@/lib/v2/v2-model";
 import type { V2Ctx, V2View } from "./v2-context";
 import {
   HMAP,
   ICO,
   NAV,
   RK,
-  SEV,
   ST,
   avatar,
   bar,
@@ -30,6 +36,11 @@ type Health = readonly [string, string, number];
 
 const DAYS = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
 const KNOWN_VIEWS: Partial<Record<V2View, string>> = { overview: "v-overview", tasks: "v-tasks" };
+const WAIT_PILL: Readonly<Record<V2WaitTone, string>> = {
+  fresh: "p-ok",
+  warn: "p-warn",
+  stale: "p-bad",
+};
 
 export function filtered(ctx: V2Ctx): V2Task[] {
   const { S, h } = ctx;
@@ -73,16 +84,23 @@ function renderHeads(ctx: V2Ctx) {
   $("h-health").innerHTML = svg(ICO.pulse) + "Sức khỏe tiến độ";
   $("h-proj").innerHTML = svg(ICO.bars) + "Tiến độ theo dự án";
   $("h-blk").innerHTML = svg(ICO.shield) + "Blocker &amp; Decision";
+  const raiseBtn = $("btnRaiseBlocker");
+  if (raiseBtn) raiseBtn.hidden = !ctx.canRaise;
   $("fProj").innerHTML =
     '<option value="all">Tất cả dự án</option>' + ctx.PROJECTS.map((p) => `<option>${esc(p.name)}</option>`).join("");
   $("fTeam").innerHTML =
     '<option value="all">Tất cả team</option>' + model.teams.map((t) => `<option>${esc(t)}</option>`).join("");
   const d = DAYS[h.TODAY.getDay()];
   $("todayTxt").textContent = `${d}, ${String(h.TODAY.getDate()).padStart(2, "0")} Tháng ${h.TODAY.getMonth() + 1} ${h.TODAY.getFullYear()}`;
-  // Profile (session) + bell (Planner notifications).
+  // Profile (session) + bell (Planner & Decision notifications).
   $("profAva").textContent = profile.initials;
   $("profName").textContent = profile.name;
   $("profRole").textContent = profile.roleLabel;
+  renderBell(ctx);
+}
+
+function renderBell(ctx: V2Ctx) {
+  const { $, model } = ctx;
   const notes = model.notifications;
   $("bellList").innerHTML = notes.length
     ? notes
@@ -253,34 +271,102 @@ export function renderProjects(ctx: V2Ctx) {
   ctx.after();
 }
 
+function decisionActionCell(r: V2DecisionRow): string {
+  if (r.kind === "unassigned") {
+    return pill("p-work", "Assign");
+  }
+  if (r.canResolve) {
+    return `<button class="chip-btn bk-act-btn pri" type="button" data-bact="resolve" data-bid="${esc(r.id)}">Gỡ xong</button>`;
+  }
+  if (r.canCancel) {
+    return `<button class="chip-btn bk-act-btn" type="button" data-bact="cancel" data-bid="${esc(r.id)}">Huỷ</button>`;
+  }
+  return pill("p-mute", "Đang chờ");
+}
+
 export function renderBlockers(ctx: V2Ctx, filteredList?: readonly V2Task[]) {
-  const { S, $ } = ctx;
+  const { S, $, h } = ctx;
   const tasks = filteredList ?? ctx.filtered();
-  const list =
-    ctx.TASKS.length > 0
-      ? deriveV2Blockers(tasks, ctx.h.TODAY)
-      : ctx.BLOCKERS.filter((b) => S.project === "all" || b.project === S.project);
-  const get = (b: (typeof list)[number], k: string) => ({ issue: b.issue, sev: SEV[b.sev][2], days: b.days, action: b.action })[k] ?? "";
-  const data = sortBy(list, S.bSort.key, S.bSort.dir, get);
-  $("blkCount").textContent = list.length + " đang mở";
+  const allRows = buildDecisionRows({
+    requests: ctx.DECISIONS,
+    tasks,
+    allTasks: ctx.TASKS,
+    members: ctx.MEMBERS,
+    currentUserId: ctx.profile.userId ?? "",
+    canEdit: ctx.canEdit,
+    now: ctx.now,
+  });
+
+  const counts = tabCounts(allRows);
+  const activeTab: V2DecisionTab = S.bTab ?? defaultDecisionTab(allRows);
+  const tabRows = filterRowsByTab(allRows, activeTab);
+
+  const tabsEl = $("blkTabs");
+  if (tabsEl) {
+    const tabs: [V2DecisionTab, string, number][] = [
+      ["waiting", "Chờ tôi xử lý", counts.waiting],
+      ["mine", "Vướng của tôi", counts.mine],
+      ["team", "Toàn team", counts.team],
+    ];
+    tabsEl.innerHTML = tabs
+      .map(
+        ([k, label, cnt]) =>
+          `<button class="blk-tab ${activeTab === k ? "on" : ""}" type="button" role="tab" aria-selected="${activeTab === k}" data-btab="${k}">${label} <b>${cnt}</b></button>`,
+      )
+      .join("");
+  }
+
+  const get = (r: V2DecisionRow, k: string) =>
+    ({
+      issue: r.need.toLowerCase(),
+      unblocker: r.unblockerName.toLowerCase(),
+      wait: r.wait.hours,
+      action: r.kind === "request" ? (r.canResolve ? "0" : "1") : "2",
+    })[k] ?? "";
+  const data = sortBy(tabRows, S.bSort.key, S.bSort.dir, get);
+
+  $("blkCount").textContent = allRows.length + " đang mở";
   $("bHead").innerHTML = headRow(
     [
       { k: "x", t: "" },
-      { k: "issue", t: "Vấn đề", s: 1 },
-      { k: "sev", t: "Mức độ", s: 1 },
-      { k: "days", t: "Ngày", s: 1 },
+      { k: "issue", t: "Cần quyết / gỡ gì", s: 1 },
+      { k: "unblocker", t: "Đang chờ", s: 1 },
+      { k: "wait", t: "Đã chờ", s: 1 },
       { k: "action", t: "Hành động", s: 1 },
     ],
     S.bSort,
     "bsort",
   );
-  const act = (a: string) => (a ? pill(a === "Escalate" ? "p-bad" : "p-work", a) : '<span style="color:var(--text-3)">–</span>');
+
   $("bBody").innerHTML = data
-    .map((b) => {
-      const o = S.openBk.has(b.id) ? "open" : "";
+    .map((r) => {
+      const o = S.openBk.has(r.id) ? "open" : "";
+      const dueStr = r.neededBy ? ` · Cần trước ${h.fmtD(r.neededBy)}` : "";
+      const orphanTag = r.orphaned ? " · Không còn trên Planner" : "";
+      const detailActions =
+        r.kind === "request"
+          ? `<div class="bk-detail-actions">` +
+            (r.canResolve
+              ? `<button class="chip-btn bk-act-btn pri" type="button" data-bact="resolve" data-bid="${esc(r.id)}">✓ Gỡ xong / Quyết định</button>`
+              : "") +
+            (r.canCancel
+              ? `<button class="chip-btn bk-act-btn" type="button" data-bact="cancel" data-bid="${esc(r.id)}">Huỷ yêu cầu</button>`
+              : "") +
+            `</div>`
+          : "";
       return (
-        `<tr class="bk-main row ${o}" data-bk="${esc(b.id)}"><td style="width:26px"><span class="chev">›</span></td><td><div class="ttl" style="min-width:130px">${esc(b.issue)}<small>${esc(b.project)}</small></div></td><td>${pill(SEV[b.sev][1], SEV[b.sev][0])}</td><td><span class="pill p-mute">${b.days}d</span></td><td>${act(b.action)}</td></tr>` +
-        `<tr class="bk-detail ${o}"><td colspan="5"><div class="in"><div class="box"><b>Người xử lý:</b> ${esc(b.owner)}<br>${esc(b.detail)}</div></div></td></tr>`
+        `<tr class="bk-main row ${o}" data-bk="${esc(r.id)}">` +
+        `<td style="width:26px"><span class="chev">›</span></td>` +
+        `<td><div class="ttl" style="min-width:130px">${esc(r.need)}<small>${esc(r.typeLabel)} · ${esc(r.project)}${esc(dueStr)}</small></div></td>` +
+        `<td><div class="who">${avatar(r.unblockerName)}<span>${esc(r.unblockerName)}</span></div></td>` +
+        `<td>${pill(WAIT_PILL[r.wait.tone], esc(r.wait.label))}</td>` +
+        `<td>${decisionActionCell(r)}</td>` +
+        `</tr>` +
+        `<tr class="bk-detail ${o}"><td colspan="5"><div class="in"><div class="box">` +
+        `<b>Người báo:</b> ${esc(r.raisedByName)} · <b>Loại:</b> ${esc(r.typeLabel)}<br>` +
+        `<b>Công việc ảnh hưởng:</b> ${esc(r.taskTitle)} (${esc(r.taskCode)})${esc(orphanTag)}` +
+        detailActions +
+        `</div></div></td></tr>`
       );
     })
     .join("");
@@ -324,6 +410,11 @@ export function openModal(ctx: V2Ctx, id: string) {
   $("mRange").value = t.progress;
   $("mRange").disabled = !ctx.canEdit;
   $("mSave").hidden = !ctx.canEdit;
+  const mRaiseBtn = $("mRaiseBtn");
+  if (mRaiseBtn) {
+    const hasOpenReq = ctx.DECISIONS.some((d) => d.status === "open" && d.plannerTaskId === t.pid);
+    mRaiseBtn.hidden = !ctx.canRaise || t.status === "done" || hasOpenReq;
+  }
   setModalPct(ctx, t.progress);
   $("modal").classList.add("open");
   $("modal").setAttribute("aria-hidden", "false");
@@ -370,6 +461,189 @@ async function saveModal(ctx: V2Ctx) {
   closeModal(ctx);
   ctx.render.all();
   ctx.toast("Đã lưu tiến độ lên Microsoft Planner!", "success");
+}
+
+/* --------------------- Raise & Resolve Blocker Modals --------------------- */
+
+export function openRaiseModal(ctx: V2Ctx, preselectedPid?: string) {
+  const { $ } = ctx;
+  if (!ctx.canRaise) {
+    ctx.toast("Người xem (Viewer) không có quyền báo vướng.", "warning");
+    return;
+  }
+  const openTaskPids = new Set(
+    ctx.DECISIONS.filter((d) => d.status === "open").map((d) => d.plannerTaskId),
+  );
+  const candidateTasks = ctx.TASKS.filter(
+    (t) => t.status !== "done" && (!openTaskPids.has(t.pid) || t.pid === preselectedPid),
+  );
+
+  $("rbTask").innerHTML = candidateTasks.length
+    ? candidateTasks
+        .map(
+          (t) =>
+            `<option value="${esc(t.pid)}" ${t.pid === preselectedPid ? "selected" : ""}>${esc(t.id)} · ${esc(t.title)} (${esc(t.project)})</option>`,
+        )
+        .join("")
+    : `<option value="">— Chưa có công việc khả dụng —</option>`;
+
+  const candidates = sortUnblockerCandidates(ctx.MEMBERS);
+  const fallbackId = ctx.profile.userId || "00000000-0000-0000-0000-00000000000a";
+  $("rbUnblocker").innerHTML = candidates.length
+    ? candidates
+        .map(
+          (m) =>
+            `<option value="${esc(m.id)}">${esc(m.name)} (${esc(m.roleLabel)})</option>`,
+        )
+        .join("")
+    : `<option value="${esc(fallbackId)}">${esc(ctx.profile.name)} (${esc(ctx.profile.roleLabel)})</option>`;
+
+  $("rbType").value = "decision";
+  $("rbNeededBy").value = "";
+  $("rbNeed").value = "";
+  const modalEl = $("raiseModal");
+  if (modalEl) {
+    modalEl.classList.add("open");
+    modalEl.setAttribute("aria-hidden", "false");
+    $("rbNeed")?.focus();
+  }
+}
+
+function closeRaiseModal(ctx: V2Ctx) {
+  const modalEl = ctx.$("raiseModal");
+  if (!modalEl) return;
+  modalEl.classList.remove("open");
+  modalEl.setAttribute("aria-hidden", "true");
+}
+
+async function submitRaiseModal(ctx: V2Ctx) {
+  const { $, S } = ctx;
+  if (!ctx.hooks.raiseBlocker || S.saving) return;
+  const plannerTaskId = String($("rbTask")?.value ?? "").trim();
+  const type = String($("rbType")?.value ?? "decision") as DecisionType;
+  const unblockerId = String($("rbUnblocker")?.value ?? "").trim();
+  const neededBy = String($("rbNeededBy")?.value ?? "").trim() || null;
+  const need = String($("rbNeed")?.value ?? "").trim();
+
+  const task = ctx.TASKS.find((t) => t.pid === plannerTaskId);
+  if (!task || !need || !unblockerId) {
+    ctx.toast("Vui lòng chọn công việc, người gỡ và nhập nội dung vướng mắc.", "warning");
+    return;
+  }
+
+  S.saving = true;
+  $("rbSubmit").disabled = true;
+  $("rbSubmit").textContent = "Đang gửi…";
+  const res = await ctx.hooks.raiseBlocker({
+    plannerTaskId,
+    taskTitle: task.title,
+    projectName: task.project,
+    type,
+    need,
+    unblockerId,
+    neededBy,
+  });
+  if (!ctx.alive()) return;
+  S.saving = false;
+  $("rbSubmit").disabled = false;
+  $("rbSubmit").textContent = "Gửi yêu cầu";
+
+  if (!res.ok) {
+    ctx.toast(res.message, "error");
+    return;
+  }
+
+  ctx.DECISIONS = [res.request, ...ctx.DECISIONS.filter((d) => d.id !== res.request.id)];
+  const nextPct = task.progress === 100 ? 50 : task.progress;
+  applySaved(ctx, task.id, "blocked", nextPct);
+  closeRaiseModal(ctx);
+  closeModal(ctx);
+  ctx.render.all();
+  ctx.toast("Đã gửi yêu cầu gỡ vướng!", "success");
+}
+
+function openResolveModal(ctx: V2Ctx, decisionId: string) {
+  const { $, S } = ctx;
+  const req = ctx.DECISIONS.find((d) => d.id === decisionId && d.status === "open");
+  if (!req) return;
+  S.resolvingId = decisionId;
+  $("rsSummary").innerHTML =
+    `<b>${esc(req.taskTitle)}</b><br><small style="color:var(--text-2)">Vướng mắc: ${esc(req.need)}</small>`;
+  $("rsResolution").value = "";
+  $("rsResolution").required = req.type === "decision";
+  $("rsLabel").textContent =
+    req.type === "decision"
+      ? "Quyết định đưa ra (bắt buộc để khép vòng)"
+      : "Cách đã gỡ vướng (tuỳ chọn)";
+  const modalEl = $("resolveModal");
+  if (modalEl) {
+    modalEl.classList.add("open");
+    modalEl.setAttribute("aria-hidden", "false");
+    $("rsResolution")?.focus();
+  }
+}
+
+function closeResolveModal(ctx: V2Ctx) {
+  const modalEl = ctx.$("resolveModal");
+  if (!modalEl) return;
+  modalEl.classList.remove("open");
+  modalEl.setAttribute("aria-hidden", "true");
+  ctx.S.resolvingId = null;
+}
+
+async function submitResolveModal(ctx: V2Ctx) {
+  const { $, S } = ctx;
+  const id = S.resolvingId;
+  if (!id || !ctx.hooks.resolveDecision || S.saving) return;
+  const req = ctx.DECISIONS.find((d) => d.id === id);
+  const resolution = String($("rsResolution")?.value ?? "").trim();
+  if (req?.type === "decision" && !resolution) {
+    ctx.toast("Vui lòng ghi rõ quyết định để khép vòng với người báo.", "warning");
+    return;
+  }
+
+  S.saving = true;
+  $("rsSubmit").disabled = true;
+  $("rsSubmit").textContent = "Đang xử lý…";
+  const res = await ctx.hooks.resolveDecision(id, { action: "resolve", resolution });
+  if (!ctx.alive()) return;
+  S.saving = false;
+  $("rsSubmit").disabled = false;
+  $("rsSubmit").textContent = "Xác nhận đã gỡ";
+
+  if (!res.ok) {
+    ctx.toast(res.message, "error");
+    return;
+  }
+
+  ctx.DECISIONS = ctx.DECISIONS.filter((d) => d.id !== id);
+  const task = ctx.TASKS.find((t) => t.pid === res.request.plannerTaskId);
+  if (task && task.status === "blocked") {
+    applySaved(ctx, task.id, task.progress === 0 ? "todo" : "working", task.progress);
+  }
+  closeResolveModal(ctx);
+  ctx.render.all();
+  ctx.toast("Đã gỡ vướng và thông báo khép vòng!", "success");
+}
+
+async function cancelDecision(ctx: V2Ctx, decisionId: string) {
+  const { S } = ctx;
+  if (!ctx.hooks.resolveDecision || S.saving) return;
+  S.saving = true;
+  const res = await ctx.hooks.resolveDecision(decisionId, { action: "cancel", resolution: "" });
+  if (!ctx.alive()) return;
+  S.saving = false;
+  if (!res.ok) {
+    ctx.toast(res.message, "error");
+    return;
+  }
+  ctx.DECISIONS = ctx.DECISIONS.filter((d) => d.id !== decisionId);
+  const task = ctx.TASKS.find((t) => t.pid === res.request.plannerTaskId);
+  if (task && task.status === "blocked") {
+    applySaved(ctx, task.id, task.progress === 0 ? "todo" : "working", task.progress);
+  }
+  ctx.render.all();
+  ctx.toast("Đã huỷ yêu cầu gỡ vướng.", "info");
 }
 
 /* ------------------------------- Events ------------------------------- */
@@ -436,8 +710,60 @@ export function installOverview(ctx: V2Ctx) {
     ctx.hooks.navigate("tasks");
   });
 
+  if ($("btnRaiseBlocker")) {
+    on($("btnRaiseBlocker"), "click", () => openRaiseModal(ctx));
+  }
+  if ($("mRaiseBtn")) {
+    on($("mRaiseBtn"), "click", () => {
+      const t = ctx.TASKS.find((x) => x.id === S.modalId);
+      closeModal(ctx);
+      openRaiseModal(ctx, t?.pid);
+    });
+  }
+  if ($("rbClose")) on($("rbClose"), "click", () => closeRaiseModal(ctx));
+  if ($("rbCancel")) on($("rbCancel"), "click", () => closeRaiseModal(ctx));
+  if ($("raiseModal")) {
+    on($("raiseModal"), "click", (e: Event) => {
+      if (e.target === $("raiseModal")) closeRaiseModal(ctx);
+    });
+  }
+  if ($("rbForm")) {
+    on($("rbForm"), "submit", (e: Event) => {
+      e.preventDefault();
+      void submitRaiseModal(ctx);
+    });
+  }
+
+  if ($("rsClose")) on($("rsClose"), "click", () => closeResolveModal(ctx));
+  if ($("rsCancel")) on($("rsCancel"), "click", () => closeResolveModal(ctx));
+  if ($("resolveModal")) {
+    on($("resolveModal"), "click", (e: Event) => {
+      if (e.target === $("resolveModal")) closeResolveModal(ctx);
+    });
+  }
+  if ($("rsForm")) {
+    on($("rsForm"), "submit", (e: Event) => {
+      e.preventDefault();
+      void submitResolveModal(ctx);
+    });
+  }
+
   on(document, "click", (e: Event) => {
     const target = e.target as HTMLElement;
+    const btab = target.closest<HTMLElement>("[data-btab]");
+    if (btab && ctx.root.contains(btab)) {
+      S.bTab = btab.dataset.btab as V2DecisionTab;
+      ctx.render.blockers();
+      return;
+    }
+    const bact = target.closest<HTMLElement>("[data-bact]");
+    if (bact && ctx.root.contains(bact)) {
+      e.stopPropagation();
+      const bid = bact.dataset.bid ?? "";
+      if (bact.dataset.bact === "resolve") openResolveModal(ctx, bid);
+      else if (bact.dataset.bact === "cancel") void cancelDecision(ctx, bid);
+      return;
+    }
     const th = target.closest<HTMLElement>("th[data-tsort],th[data-psort],th[data-bsort]");
     if (th) {
       const [state, key] = th.dataset.tsort
@@ -488,6 +814,8 @@ export function installOverview(ctx: V2Ctx) {
   on(document, "keydown", (e: KeyboardEvent) => {
     if (e.key === "Escape") {
       closeModal(ctx);
+      closeRaiseModal(ctx);
+      closeResolveModal(ctx);
       $("picker").hidden = true;
       $("bellPop").classList.remove("open");
       $("profMenu").classList.remove("open");

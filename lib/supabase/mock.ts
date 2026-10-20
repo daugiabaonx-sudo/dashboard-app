@@ -43,6 +43,7 @@ let projectRows: ProjectRow[] | null = null;
 let taskRows: TaskRow[] | null = null;
 let notificationRows: NotificationRow[] | null = null;
 let activityRows: ActivityRow[] | null = null;
+const decisionRequestRows: Record<string, unknown>[] = [];
 
 function getProjectRows(): ProjectRow[] {
   if (!projectRows) projectRows = Array.from(projects.values()).map(toProjectRow);
@@ -448,6 +449,19 @@ class MockFrom<T extends Record<string, unknown>> {
       inserted.push(row);
     }
     for (const row of inserted) {
+      if (this.table === "decision_requests") {
+        const dr = row as Record<string, unknown>;
+        getNotificationRows().unshift({
+          id: crypto.randomUUID(),
+          user_id: String(dr.unblocker_id ?? CURRENT_USER_ID),
+          type: "blocked",
+          title: `Cần gỡ vướng: ${String(dr.task_title ?? "")}`,
+          body: String(dr.need ?? ""),
+          link: `/?focus=${String(dr.planner_task_id ?? "")}`,
+          read: false,
+          created_at: new Date().toISOString(),
+        });
+      }
       __broadcast(this.table, "INSERT", row as Record<string, unknown>, undefined);
     }
     return {
@@ -466,6 +480,23 @@ class MockFrom<T extends Record<string, unknown>> {
         for (const r of matched) {
           const original = { ...r };
           Object.assign(r, values);
+          if (
+            this.table === "decision_requests" &&
+            original.status === "open" &&
+            r.status === "resolved"
+          ) {
+            const resolutionTxt = String(r.resolution ?? "").trim();
+            getNotificationRows().unshift({
+              id: crypto.randomUUID(),
+              user_id: String(r.raised_by ?? CURRENT_USER_ID),
+              type: "blocked",
+              title: `Đã gỡ vướng: ${String(r.task_title ?? "")}`,
+              body: resolutionTxt || "Yêu cầu gỡ vướng đã được xử lý.",
+              link: `/?focus=${String(r.planner_task_id ?? "")}`,
+              read: false,
+              created_at: new Date().toISOString(),
+            });
+          }
           __broadcast(
             this.table,
             "UPDATE",
@@ -512,6 +543,8 @@ export const mockClient: SupabaseClient = {
         return new MockFrom(getNotificationRows(), table);
       case "activity_log":
         return new MockFrom(getActivityRows(), table);
+      case "decision_requests":
+        return new MockFrom(decisionRequestRows, table);
       default:
         return new MockFrom([], table);
     }

@@ -8,6 +8,7 @@ import {
   ALLOWED_PLANNER_PLAN_TITLES,
   EXCLUDED_PLANNER_PLAN_TITLES,
   PLANNER_UNASSIGNED_ID,
+  blockedTitlePatch,
   buildPlannerBlockers,
   buildPlannerDataset,
   filterPlannerPlans,
@@ -264,9 +265,8 @@ describe("buildPlannerDataset", () => {
     expect(plan2).toMatchObject({ tasksDone: 0, tasksTotal: 1, health: "on_track" });
   });
 
-  it("derives blockers from overdue and unassigned tasks while notifications remain empty", () => {
+  it("derives blockers only from blocked and unassigned tasks while notifications remain empty", () => {
     expect(ds.blockers.map((b) => [b.taskId, b.actionRequired])).toEqual([
-      ["t2", "Escalate"],
       ["t3", "Assign"],
     ]);
     expect(ds.notifications).toEqual([]);
@@ -326,7 +326,7 @@ describe("buildPlannerBlockers", () => {
     createdAt: "2026-10-01",
   };
 
-  it("creates blockers for blocked, overdue, unassigned, and due-soon at-risk tasks", () => {
+  it("creates blockers only for explicitly blocked and unassigned tasks (excluding overdue and due-soon)", () => {
     const tasks: SxTask[] = [
       { ...baseTask, id: "done-1", status: "completed", progress: 100 },
       { ...baseTask, id: "blk-1", status: "blocked", title: "Chờ khách duyệt" },
@@ -339,11 +339,15 @@ describe("buildPlannerBlockers", () => {
     const blockers = buildPlannerBlockers(tasks, NOW);
     expect(blockers.map((b) => [b.taskId, b.severity, b.actionRequired])).toEqual([
       ["blk-1", "high", "Escalate"],
-      ["late-1", "high", "Escalate"],
       ["unassigned-1", "medium", "Assign"],
-      ["soon-todo", "medium", "Escalate"],
-      ["soon-high", "high", "Escalate"],
     ]);
+  });
+
+  it("blockedTitlePatch adds or strips [Bị chặn] prefix idempotently", () => {
+    expect(blockedTitlePatch("Thiết kế UI", true)).toEqual({ title: "[Bị chặn] Thiết kế UI" });
+    expect(blockedTitlePatch("[Bị chặn] Thiết kế UI", true)).toBeNull();
+    expect(blockedTitlePatch("[Bị chặn] Thiết kế UI", false)).toEqual({ title: "Thiết kế UI" });
+    expect(blockedTitlePatch("Thiết kế UI", false)).toBeNull();
   });
 });
 

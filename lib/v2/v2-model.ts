@@ -194,8 +194,8 @@ function dayDiffIso(fromIso: string, toIso: string): number {
 
 /**
  * Dynamically derives V2Blocker rows from the currently filtered V2Task list,
- * so the Blocker & Decision card stays synchronized with Team / Project /
- * Period / Search filters and live Kanban / Modal edits.
+ * keeping only explicitly blocked tasks and unassigned tasks (overdue and
+ * due-soon tasks belong solely in the Attention card).
  */
 export function deriveV2Blockers(tasks: readonly V2Task[], today: Date): V2Blocker[] {
   const todayIso = isoDay(today);
@@ -223,21 +223,6 @@ export function deriveV2Blockers(tasks: readonly V2Task[], today: Date): V2Block
       continue;
     }
 
-    if (t.deadline && daysUntilDue < 0) {
-      const daysOverdue = Math.max(1, -daysUntilDue);
-      blockers.push({
-        id: `blk-${t.pid}`,
-        issue: `Trễ hạn: ${t.title}`,
-        project: t.project,
-        sev: isHighRisk || daysOverdue >= 3 ? "high" : "medium",
-        days: daysOverdue,
-        action: isUnassigned ? "Assign" : "Escalate",
-        owner: t.owner,
-        detail: `Ảnh hưởng công việc: ${t.title} (${t.id})`,
-      });
-      continue;
-    }
-
     if (isUnassigned) {
       blockers.push({
         id: `blk-${t.pid}`,
@@ -246,22 +231,6 @@ export function deriveV2Blockers(tasks: readonly V2Task[], today: Date): V2Block
         sev: isHighRisk ? "high" : "medium",
         days: daysSinceStart,
         action: "Assign",
-        owner: t.owner,
-        detail: `Ảnh hưởng công việc: ${t.title} (${t.id})`,
-      });
-      continue;
-    }
-
-    const isSoonTodo = t.status === "todo" && daysUntilDue >= 0 && daysUntilDue <= 2;
-    const isSoonHigh = isHighRisk && daysUntilDue >= 0 && daysUntilDue <= 3;
-    if (isSoonTodo || isSoonHigh) {
-      blockers.push({
-        id: `blk-${t.pid}`,
-        issue: isSoonTodo ? `Sát hạn chưa bắt đầu: ${t.title}` : `Ưu tiên cao sát hạn: ${t.title}`,
-        project: t.project,
-        sev: isHighRisk || daysUntilDue === 0 ? "high" : "medium",
-        days: Math.max(1, 3 - daysUntilDue),
-        action: "Escalate",
         owner: t.owner,
         detail: `Ảnh hưởng công việc: ${t.title} (${t.id})`,
       });

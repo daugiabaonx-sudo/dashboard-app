@@ -302,6 +302,10 @@ export function installTasks(ctx: V2Ctx) {
   async function setStatus(id: string, key: string) {
     const t = ctx.TASKS.find((x) => x.id === id);
     if (!t || key === "overdue" || key === t.status) return;
+    if (key === "blocked" && ctx.hooks.raiseBlocker) {
+      ctx.openRaiseModal(t.pid);
+      return;
+    }
     if (!ctx.canEdit) {
       ctx.toast("Chỉ Owner, Admin hoặc Manager được đổi trạng thái công việc.", "warning");
       return;

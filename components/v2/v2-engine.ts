@@ -5,6 +5,8 @@
 // Every listener/timer is registered through the context so unmount (and
 // React Strict Mode's double effect run) leaves no residue.
 
+import type { DecisionRequest } from "@/lib/types";
+import type { V2DecisionMember } from "@/lib/v2/v2-decisions";
 import type { V2Model } from "@/lib/v2/v2-model";
 import type { V2Ctx, V2Hooks, V2Profile, V2State, V2View } from "./v2-context";
 import { createHelpers, startOfToday } from "./v2-core";
@@ -13,6 +15,7 @@ import {
   filtered,
   installOverview,
   openModal,
+  openRaiseModal,
   renderBlockers,
   renderNav,
   renderOverview,
@@ -25,6 +28,9 @@ export interface V2MountOptions {
   readonly model: V2Model;
   readonly profile: V2Profile;
   readonly canEdit: boolean;
+  readonly canRaise?: boolean;
+  readonly decisions?: readonly DecisionRequest[];
+  readonly members?: readonly V2DecisionMember[];
   readonly view: V2View;
   /** Planner task id to open in the modal on load (`?focus=`). */
   readonly focusPid?: string;
@@ -49,9 +55,11 @@ export function mountV2(root: HTMLElement, opts: V2MountOptions): () => void {
     pSort: { key: "", dir: 1 },
     pPage: 1,
     pSize: 4,
-    bSort: { key: "sev", dir: 1 },
+    bSort: { key: "wait", dir: -1 },
+    bTab: null,
     openBk: new Set(),
     modalId: null,
+    resolvingId: null,
     saving: false,
   };
 
@@ -72,11 +80,15 @@ export function mountV2(root: HTMLElement, opts: V2MountOptions): () => void {
     alive: () => alive,
     model: opts.model,
     TASKS: [...opts.model.tasks],
+    DECISIONS: opts.decisions ? [...opts.decisions] : [],
+    MEMBERS: opts.members ?? [],
     PROJECTS: opts.model.projects,
     BLOCKERS: opts.model.blockers,
     h: createHelpers(startOfToday(opts.now)),
+    now: opts.now ?? new Date(),
     S,
     canEdit: opts.canEdit,
+    canRaise: opts.canRaise ?? true,
     profile: opts.profile,
     hooks: opts.hooks,
     render: {
@@ -102,6 +114,7 @@ export function mountV2(root: HTMLElement, opts: V2MountOptions): () => void {
     toast: () => undefined,
     filtered: () => filtered(ctx),
     openModal: (id) => openModal(ctx, id),
+    openRaiseModal: (pid) => openRaiseModal(ctx, pid),
     setStatus: (id, key) => void tasksApi?.setStatus(id, key),
   };
   ctx.toast = createToaster(root);

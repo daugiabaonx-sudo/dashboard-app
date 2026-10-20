@@ -37,6 +37,19 @@ export function stripBlockedPlannerPrefix(title: string): string {
   return stripped || title.trim();
 }
 
+/**
+ * Computes a minimal `{ title }` patch to add or remove the `[Bị chặn] `
+ * prefix on a Microsoft Planner task. Returns `null` when no change is needed.
+ */
+export function blockedTitlePatch(title: string, blocked: boolean): { title: string } | null {
+  const currentlyBlocked = isBlockedPlannerTitle(title);
+  if (blocked === currentlyBlocked) return null;
+  const clean = stripBlockedPlannerPrefix(title);
+  return {
+    title: (blocked ? `${BLOCKED_PLANNER_PREFIX}${clean}` : clean).slice(0, 255),
+  };
+}
+
 export const ALLOWED_PLANNER_PLAN_TITLES = [
   "Sunext Manage Task",
   "DEV Manage Task",
@@ -212,11 +225,10 @@ function projectHealthOf(planId: string, tasks: readonly SxTask[]): SxProjectHea
 }
 
 /**
- * Derives Blocker & Decision records from incomplete Planner tasks:
+ * Derives Blocker & Decision records from incomplete Planner tasks without
+ * overlapping the Attention ("Công việc cần chú ý") card:
  * 1. Explicitly blocked tasks (status === "blocked")
- * 2. Overdue tasks (status === "overdue")
- * 3. Unassigned tasks (employeeId === PLANNER_UNASSIGNED_ID)
- * 4. Tasks due within <= 2 days at 0% progress, or high-priority tasks due within <= 3 days.
+ * 2. Unassigned tasks (employeeId === PLANNER_UNASSIGNED_ID) requiring manager assignment
  */
 export function buildPlannerBlockers(tasks: readonly SxTask[], now: number): SxBlocker[] {
   const todayIso = vnDay(now);
@@ -245,23 +257,6 @@ export function buildPlannerBlockers(tasks: readonly SxTask[], now: number): SxB
       continue;
     }
 
-    if (t.status === "overdue") {
-      const daysOverdue = t.deadline ? Math.max(1, -daysUntilDue) : 1;
-      blockers.push({
-        id: `blk-${t.id}`,
-        taskId: t.id,
-        issue: `Trễ hạn: ${t.title}`,
-        severity: t.priority === "high" || daysOverdue >= 3 ? "high" : "medium",
-        daysBlocked: daysOverdue,
-        actionRequired: isUnassigned ? "Assign" : "Escalate",
-        taskTitle: t.title,
-        employeeId: t.employeeId,
-        projectId: t.projectId,
-        status: "open",
-      });
-      continue;
-    }
-
     if (isUnassigned) {
       blockers.push({
         id: `blk-${t.id}`,
@@ -270,24 +265,6 @@ export function buildPlannerBlockers(tasks: readonly SxTask[], now: number): SxB
         severity: t.priority === "high" ? "high" : "medium",
         daysBlocked: daysSinceCreated,
         actionRequired: "Assign",
-        taskTitle: t.title,
-        employeeId: t.employeeId,
-        projectId: t.projectId,
-        status: "open",
-      });
-      continue;
-    }
-
-    const isSoonTodo = t.status === "not_started" && daysUntilDue >= 0 && daysUntilDue <= 2;
-    const isSoonHigh = t.priority === "high" && daysUntilDue >= 0 && daysUntilDue <= 3;
-    if (isSoonTodo || isSoonHigh) {
-      blockers.push({
-        id: `blk-${t.id}`,
-        taskId: t.id,
-        issue: isSoonTodo ? `Sát hạn chưa bắt đầu: ${t.title}` : `Ưu tiên cao sát hạn: ${t.title}`,
-        severity: t.priority === "high" || daysUntilDue === 0 ? "high" : "medium",
-        daysBlocked: Math.max(1, 3 - daysUntilDue),
-        actionRequired: "Escalate",
         taskTitle: t.title,
         employeeId: t.employeeId,
         projectId: t.projectId,

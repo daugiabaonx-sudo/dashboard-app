@@ -4,14 +4,24 @@
 // Client host of the SUNEXT Dashboard V2 template. Renders the template's
 // static markup (no user data — see v2-markup.ts) and mounts the template
 // engine on it with real Planner data. Writes go to Microsoft Planner via
-// PATCH /api/planner/tasks/:id (role-gated server-side as well).
+// PATCH /api/planner/tasks/:id and human-raised Blocker & Decision requests
+// via POST /api/decision-requests and PATCH /api/decision-requests/:id.
 
 import { useEffect, useRef } from "react";
 import { csrfFetch } from "@/lib/csrf-client";
 import { plannerPatchFromEdit } from "@/lib/planner/planner-mapping";
 import type { SxStatus, SxTask } from "@/lib/sx-dashboard";
+import type { DecisionRequest } from "@/lib/types";
+import type { V2DecisionMember } from "@/lib/v2/v2-decisions";
 import { v2StatusOf, type V2Model, type V2Status } from "@/lib/v2/v2-model";
-import type { V2Hooks, V2Profile, V2SaveResult, V2View } from "./v2-context";
+import type {
+  V2Hooks,
+  V2Profile,
+  V2RaiseResult,
+  V2ResolveResult,
+  V2SaveResult,
+  V2View,
+} from "./v2-context";
 import { mountV2 } from "./v2-engine";
 import { V2_MARKUP } from "./v2-markup";
 import "./v2.css";
@@ -20,6 +30,9 @@ export interface V2AppProps {
   readonly model: V2Model;
   readonly profile: V2Profile;
   readonly canEdit: boolean;
+  readonly canRaise?: boolean;
+  readonly decisions?: readonly DecisionRequest[];
+  readonly members?: readonly V2DecisionMember[];
   readonly view: V2View;
   readonly focusPid?: string;
   /** Planner tasks as loaded (originals for computing PATCH diffs). */
@@ -41,7 +54,24 @@ interface SaveResponse {
   error?: string;
 }
 
-export function V2App({ model, profile, canEdit, view, focusPid, plannerTasks, etags }: V2AppProps) {
+interface DecisionMutationResponse {
+  request?: DecisionRequest;
+  plannerSynced?: boolean;
+  error?: string;
+}
+
+export function V2App({
+  model,
+  profile,
+  canEdit,
+  canRaise = true,
+  decisions = [],
+  members = [],
+  view,
+  focusPid,
+  plannerTasks,
+  etags,
+}: V2AppProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const originals = useRef(new Map(plannerTasks.map((t) => [t.id, t])));
   const etagRef = useRef<Record<string, string>>({ ...etags });
@@ -76,6 +106,44 @@ export function V2App({ model, profile, canEdit, view, focusPid, plannerTasks, e
           return { ok: false, message: "Mất kết nối — chưa lưu được vào Microsoft Planner." };
         }
       },
+      async raiseBlocker(input): Promise<V2RaiseResult> {
+        try {
+          const res = await csrfFetch("/api/decision-requests", {
+            method: "POST",
+            body: input,
+          });
+          const json = (await res.json().catch(() => ({}))) as DecisionMutationResponse;
+          if (!res.ok || !json.request) {
+            return { ok: false, message: json.error ?? "Không tạo được yêu cầu gỡ vướng." };
+          }
+          return {
+            ok: true,
+            request: json.request,
+            plannerSynced: Boolean(json.plannerSynced),
+          };
+        } catch {
+          return { ok: false, message: "Mất kết nối — chưa gửi được yêu cầu gỡ vướng." };
+        }
+      },
+      async resolveDecision(id, input): Promise<V2ResolveResult> {
+        try {
+          const res = await csrfFetch(`/api/decision-requests/${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            body: input,
+          });
+          const json = (await res.json().catch(() => ({}))) as DecisionMutationResponse;
+          if (!res.ok || !json.request) {
+            return { ok: false, message: json.error ?? "Không cập nhật được yêu cầu gỡ vướng." };
+          }
+          return {
+            ok: true,
+            request: json.request,
+            plannerSynced: Boolean(json.plannerSynced),
+          };
+        } catch {
+          return { ok: false, message: "Mất kết nối — chưa cập nhật được yêu cầu gỡ vướng." };
+        }
+      },
       async signOut() {
         try {
           const res = await csrfFetch("/api/auth/sign-out", { method: "POST" });
@@ -92,13 +160,23 @@ export function V2App({ model, profile, canEdit, view, focusPid, plannerTasks, e
       },
     };
 
-    const unmount = mountV2(host, { model, profile, canEdit, view, focusPid, hooks });
+    const unmount = mountV2(host, {
+      model,
+      profile,
+      canEdit,
+      canRaise,
+      decisions,
+      members,
+      view,
+      focusPid,
+      hooks,
+    });
     return () => {
       unmount();
       // Restore pristine markup so a re-mount starts from the template state.
       host.innerHTML = V2_MARKUP;
     };
-  }, [model, profile, canEdit, view, focusPid]);
+  }, [model, profile, canEdit, canRaise, decisions, members, view, focusPid]);
 
   return <div ref={hostRef} className="v2-host" dangerouslySetInnerHTML={{ __html: V2_MARKUP }} suppressHydrationWarning />;
 }

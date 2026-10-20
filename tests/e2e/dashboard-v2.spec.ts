@@ -68,7 +68,8 @@ for (const vp of VIEWPORTS) {
       await expect(page.locator("#h-att")).toContainText("Công việc cần chú ý");
       await expect(page.locator("#h-blk")).toContainText("Blocker & Decision");
       await expect(page.locator("#blkCount")).toContainText("đang mở");
-      await expect(page.locator("#bHead")).toContainText("Vấn đề");
+      await expect(page.locator("#blkTabs")).toContainText("Chờ tôi xử lý");
+      await expect(page.locator("#bHead")).toContainText("Cần quyết / gỡ gì");
 
       await page.waitForTimeout(300);
 
@@ -172,6 +173,49 @@ test.describe("v2 /tasks — multi-view workspace", () => {
     // Alt+Click resets back to system preference
     await themeBtn.click({ modifiers: ["Alt"] });
     await expect(themeBtn).toHaveAttribute("data-source", "system");
+
+    expect(errors, `errors: ${errors.join(" | ")}`).toEqual([]);
+  });
+});
+
+test.describe("v2 Blocker & Decision card", () => {
+  test("switches decision tabs and opens/closes Raise Blocker modal cleanly", async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        errors.push(`console.error: ${msg.text()}`);
+      }
+    });
+
+    await page.goto("/");
+    await expect(page.locator("#h-blk")).toContainText("Blocker & Decision");
+
+    // Verify 3 role-aware tabs exist and switch cleanly
+    for (const tab of ["waiting", "mine", "team"] as const) {
+      const tabBtn = page.locator(`#blkTabs button[data-btab="${tab}"]`);
+      await expect(tabBtn).toBeVisible();
+      await tabBtn.click();
+      await expect(tabBtn).toHaveAttribute("aria-selected", "true");
+    }
+
+    // Open Raise Blocker modal (#btnRaiseBlocker) and verify form controls
+    const raiseBtn = page.locator("#btnRaiseBlocker");
+    await expect(raiseBtn).toBeVisible();
+    await raiseBtn.click();
+    await expect(page.locator("#raiseModal")).toHaveClass(/open/);
+    await expect(page.locator("#rbNeed")).toBeVisible();
+    await expect(page.locator("#rbUnblocker")).toBeVisible();
+    await expect(page.locator("#rbType option")).toHaveCount(5);
+
+    // Select a different type option and close via Escape
+    await page.locator("#rbType").selectOption("waiting_on");
+    await expect(page.locator("#rbType")).toHaveValue("waiting_on");
+
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#raiseModal")).not.toHaveClass(/open/);
 
     expect(errors, `errors: ${errors.join(" | ")}`).toEqual([]);
   });
