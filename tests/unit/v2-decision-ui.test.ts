@@ -145,8 +145,17 @@ describe("V2 Blocker & Decision human-raised UI integration", () => {
 
     // 1. Overdue task T-002 appears in Attention card (#tBody) but NOT in Blocker card (#bBody)
     expect(host.querySelector("#tBody")?.textContent).toContain("Update skill research");
+    expect(host.querySelector("#bHead")?.textContent).toContain("Công việc");
+    expect(host.querySelector("#bHead")?.textContent).toContain("Người phụ trách");
+    expect(host.querySelector("#bHead")?.textContent).not.toContain("Cần quyết / gỡ gì");
+    expect(host.querySelector("#bHead")?.textContent).not.toContain("Đang chờ");
+    const mainRowTtl = host.querySelector("#bBody tr.bk-main .ttl")?.textContent ?? "";
+    expect(mainRowTtl).toContain("Làm luồng cho các team");
+    expect(mainRowTtl).not.toContain("Cần duyệt phương án luồng");
+    const detailText = host.querySelector("#bBody tr.bk-detail .box")?.textContent ?? "";
+    expect(detailText).toContain("Nội dung vướng / cần quyết:");
+    expect(detailText).toContain("Cần duyệt phương án luồng");
     const bBodyText = host.querySelector("#bBody")?.textContent ?? "";
-    expect(bBodyText).toContain("Cần duyệt phương án luồng");
     expect(bBodyText).not.toContain("Update skill research");
     expect(host.querySelector("#bBody")?.innerHTML).not.toContain("<script>");
 

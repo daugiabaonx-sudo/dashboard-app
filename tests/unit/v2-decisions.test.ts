@@ -159,5 +159,17 @@ describe("buildDecisionRows, filterRowsByTab & tabCounts", () => {
     expect(defaultDecisionTab([])).toBe("team");
     expect(isManagerOrAbove("manager")).toBe(true);
     expect(isManagerOrAbove("member")).toBe(false);
+
+    // When a Planner task is blocked without a DecisionRequest, use its owner as unblockerName
+    const rowsWithoutReq = buildDecisionRows({
+      requests: [],
+      tasks: TASKS,
+      members: MEMBERS,
+      currentUserId: "u-mgr",
+      canEdit: true,
+      now: NOW,
+    });
+    expect(rowsWithoutReq.find((r) => r.id === "blocked-p-1")?.unblockerName).toBe("Hanh Nguyen");
+    expect(rowsWithoutReq.find((r) => r.id === "unassigned-p-unassigned")?.unblockerName).toBe("Quản lý");
   });
 });

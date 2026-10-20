@@ -47,3 +47,17 @@ Redesign the **Blocker & Decision** card in Dashboard V2 (`components/v2/*`) aro
   - Database RLS policies (`decision_requests_select`, `decision_requests_insert`, `decision_requests_update`) enforce `user_in_workspace(workspace_id)` at the PostgreSQL layer.
 - **XSS Prevention:** All user-supplied fields (`taskTitle`, `need`, `resolution`, user names) rendered in `components/v2/v2-overview.ts` are escaped through `esc()` before HTML interpolation.
 - **Immutability:** State transitions (`ctx.setDecisionRequests`, `buildDecisionRows`, `sortUnblockerCandidates`) return new arrays/objects without mutating inputs.
+
+---
+
+## 4. UI Refinement: "Công việc" & "Người phụ trách" Column Headers + Direct Task Title Display
+
+- **Change:**
+  - Renamed the first column header in `#bHead` from `"Cần quyết / gỡ gì"` to `"Công việc"`, updated `.bk-main .ttl` to display `${esc(r.taskTitle)}` directly (preventing prefixes like `"Chưa giao phụ trách: ..."` from truncating the task name), updated `issue` sort key to `r.taskTitle.toLowerCase()`, and surfaced `<b>Nội dung vướng / cần quyết:</b> ${esc(r.need)}` in `.bk-detail .box`.
+  - Renamed the second column header in `#bHead` from `"Đang chờ"` to `"Người phụ trách"`, and updated `buildDecisionRows` in `lib/v2/v2-decisions.ts` so `[Bị chặn]` Planner tasks that already have an assigned owner (`t.owner !== "Chưa giao"`) display `t.owner` as `unblockerName` instead of `"Quản lý"`.
+- **Local `/code-review` Report:**
+  - **CRITICAL (Security):** 0 issues — `r.taskTitle`, `r.need`, and `r.unblockerName` all pass through `esc()`, verified by `<script>alert(1)</script>` XSS test in `tests/unit/v2-decision-ui.test.ts`.
+  - **HIGH (Code Quality):** 0 issues — no `console.log`, no `TODO`/`FIXME`, clean function boundaries.
+  - **MEDIUM (Best Practices):** 0 issues — immutable sorting via `sortBy`, full unit (`66/66` files, `702/702` tests) and E2E coverage.
+  - **Validation:** `npx tsc --noEmit` (Pass), `npm run lint` (0 errors), `npm run test:unit` (`702/702` Pass).
+

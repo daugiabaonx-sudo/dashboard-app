@@ -195,7 +195,7 @@ export function buildDecisionRows(input: BuildDecisionRowsInput): V2DecisionRow[
       raisedById: "",
       raisedByName: "Hệ thống Planner",
       unblockerId: "",
-      unblockerName: "Quản lý",
+      unblockerName: isUnassigned ? "Quản lý" : t.owner,
       neededBy: t.deadline || null,
       wait: waitAge(createdIso, now),
       isWaitingOnMe: canEdit,

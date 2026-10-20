@@ -318,7 +318,7 @@ export function renderBlockers(ctx: V2Ctx, filteredList?: readonly V2Task[]) {
 
   const get = (r: V2DecisionRow, k: string) =>
     ({
-      issue: r.need.toLowerCase(),
+      issue: r.taskTitle.toLowerCase(),
       unblocker: r.unblockerName.toLowerCase(),
       wait: r.wait.hours,
       action: r.kind === "request" ? (r.canResolve ? "0" : "1") : "2",
@@ -329,8 +329,8 @@ export function renderBlockers(ctx: V2Ctx, filteredList?: readonly V2Task[]) {
   $("bHead").innerHTML = headRow(
     [
       { k: "x", t: "" },
-      { k: "issue", t: "Cần quyết / gỡ gì", s: 1 },
-      { k: "unblocker", t: "Đang chờ", s: 1 },
+      { k: "issue", t: "Công việc", s: 1 },
+      { k: "unblocker", t: "Người phụ trách", s: 1 },
       { k: "wait", t: "Đã chờ", s: 1 },
       { k: "action", t: "Hành động", s: 1 },
     ],
@@ -357,13 +357,14 @@ export function renderBlockers(ctx: V2Ctx, filteredList?: readonly V2Task[]) {
       return (
         `<tr class="bk-main row ${o}" data-bk="${esc(r.id)}">` +
         `<td style="width:26px"><span class="chev">›</span></td>` +
-        `<td><div class="ttl" style="min-width:130px">${esc(r.need)}<small>${esc(r.typeLabel)} · ${esc(r.project)}${esc(dueStr)}</small></div></td>` +
+        `<td><div class="ttl" style="min-width:130px">${esc(r.taskTitle)}<small>${esc(r.typeLabel)} · ${esc(r.project)}${esc(dueStr)}</small></div></td>` +
         `<td><div class="who">${avatar(r.unblockerName)}<span>${esc(r.unblockerName)}</span></div></td>` +
         `<td>${pill(WAIT_PILL[r.wait.tone], esc(r.wait.label))}</td>` +
         `<td>${decisionActionCell(r)}</td>` +
         `</tr>` +
         `<tr class="bk-detail ${o}"><td colspan="5"><div class="in"><div class="box">` +
         `<b>Người báo:</b> ${esc(r.raisedByName)} · <b>Loại:</b> ${esc(r.typeLabel)}<br>` +
+        `<b>Nội dung vướng / cần quyết:</b> ${esc(r.need)}<br>` +
         `<b>Công việc ảnh hưởng:</b> ${esc(r.taskTitle)} (${esc(r.taskCode)})${esc(orphanTag)}` +
         detailActions +
         `</div></div></td></tr>`
